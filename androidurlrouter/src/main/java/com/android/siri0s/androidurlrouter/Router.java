@@ -19,19 +19,18 @@ import java.util.regex.Pattern;
  * thus rendering correct fragment instantiation painless
  *
  * @author Georgios Sofronas
- *
  */
 public class Router {
 
-	public static final String ROUTE = "route";
-	public static final String ROUTE_ARGS = "routeArgs";
+    public static final String ROUTE = "route";
+    public static final String ROUTE_ARGS = "routeArgs";
 
-	private static Router router = new Router();
-	private HashMap<String, Class<? extends Fragment>> routes;
+    private static Router router = new Router();
+    private HashMap<String, Class<? extends Fragment>> routes;
     private HashMap<String, RouterAction> routeActions;
     private Route resolvedRoute;
-	private Context context;
-	private int[] mAnimationResources;
+    private Context context;
+    private int[] mAnimationResources;
     public static String currentRoute;
     private ArrayList<String> routeHistory;
 
@@ -40,63 +39,65 @@ public class Router {
     public static String currentFrag;
     public static Bundle currentFragArgs;
 
-	public Router() {
-		routes = new HashMap<String, Class<? extends Fragment>>();
+    public Router() {
+        routes = new HashMap<String, Class<? extends Fragment>>();
         routeActions = new HashMap<String, RouterAction>();
-        mAnimationResources = new int[] {0, 0, 0, 0};
+        mAnimationResources = new int[]{0, 0, 0, 0};
         routeHistory = new ArrayList<>();
     }
 
-	/**
-	 * Set this Router's application context
-	 *
-	 * @param context The application context
-	 *
-	 * @return The Router instance to use for method chaining
-	 */
-	public Router setContext(Context context) {
-		this.context = context.getApplicationContext();
+    /**
+     * Set this Router's application context
+     *
+     * @param context The application context
+     * @return The Router instance to use for method chaining
+     */
+    public Router setContext(Context context) {
+        this.context = context.getApplicationContext();
 
-		return this;
-	}
+        return this;
+    }
 
-	public Context getContext() {
-		return this.context;
-	}
+    public Context getContext() {
+        return this.context;
+    }
 
-	public HashMap<String, Class<? extends Fragment>> getRoutes() {
-		return this.routes;
-	}
+    public HashMap<String, Class<? extends Fragment>> getRoutes() {
+        return this.routes;
+    }
 
-	public static synchronized Router sharedRouter() {
-		return router;
-	}
+    public static synchronized Router getInstance() {
+        return router;
+    }
 
-	/**
-	 * Define animation resources to apply to fragment transitions made by the Router
-	 *
-	 * @param enter Animation resource when fragment enters screen
-	 * @param exit Animation resource when fragment exits screen
-	 * @param popEnter Animation resource when fragment enters screen after the backstack is popped
-	 * @param popExit Animation resource when fragment exits screen after the backstack is popped
-	 *
-	 * @return The Router instance to use for method chaining
-	 */
-	public Router setFragmentAnimations(int enter, int exit, int popEnter, int popExit) {
+    /**
+     * Define animation resources to apply to fragment transitions made by the Router
+     *
+     * @param enter    Animation resource when fragment enters screen
+     * @param exit     Animation resource when fragment exits screen
+     * @param popEnter Animation resource when fragment enters screen after the backstack is popped
+     * @param popExit  Animation resource when fragment exits screen after the backstack is popped
+     * @return The Router instance to use for method chaining
+     */
+    public Router setFragmentAnimations(int enter, int exit, int popEnter, int popExit) {
 
-		mAnimationResources[0] = enter;
-		mAnimationResources[1] = exit;
-		mAnimationResources[2] = popEnter;
-		mAnimationResources[3] = popExit;
+        mAnimationResources[0] = enter;
+        mAnimationResources[1] = exit;
+        mAnimationResources[2] = popEnter;
+        mAnimationResources[3] = popExit;
 
-		return this;
-	}
+        return this;
+    }
 
-    /* Call before instantiating */
+    /**
+     * Resets the router's properties
+     *
+     * @return Router for method chaining
+     */
     public Router reset() {
         routes.clear();
         routeActions.clear();
-        mAnimationResources = new int[] {0, 0, 0, 0};
+        mAnimationResources = new int[]{0, 0, 0, 0};
         currentRoute = null;
         currentFrag = null;
         context = null;
@@ -105,29 +106,47 @@ public class Router {
         return this;
     }
 
-	/**
-	 * Map a route to a fragment
-	 *
-	 * @param route The route to map
-	 * @param fragmentClazz The fragment class associated with the route
-	 */
-	public Router mapRoute(String route, Class<? extends Fragment> fragmentClazz) {
+    /**
+     * Map a route to a fragment
+     *
+     * @param route         The route to map
+     * @param fragmentClazz The fragment class associated with the route
+     *
+     * @return              Router for method chaining
+     */
+    public Router mapRoute(String route, Class<? extends Fragment> fragmentClazz) {
         checkForDuplicates(route);
-		routes.put(route, fragmentClazz);
+        routes.put(route, fragmentClazz);
 
-		return this;
-	}
+        return this;
+    }
 
-	public Router mapRoute(int routeStringRes, Class<? extends Fragment> fragmentClazz) {
-		String route = getContext().getString(routeStringRes);
+    /**
+     * Map a route to a fragment
+     *
+     * @param routeStringRes The route to map as an android string resource (e.g. R.string.whatever)
+     * @param fragmentClazz  The fragment class associated with the route
+     *
+     * @return Router for method chaining
+     */
+    public Router mapRoute(int routeStringRes, Class<? extends Fragment> fragmentClazz) {
+        String route = getContext().getString(routeStringRes);
 
-		checkForDuplicates(route);
+        checkForDuplicates(route);
 
-		routes.put(route, fragmentClazz);
+        routes.put(route, fragmentClazz);
 
-		return this;
-	}
+        return this;
+    }
 
+    /**
+     * Map a route to an action
+     *
+     * @param route The route to map
+     * @param action  An object implementing {@link RouterAction} to assign to the route
+     *
+     * @return Router for method chaining
+     */
     public Router mapRouteAction(String route, RouterAction action) {
         checkForDuplicates(route);
         routeActions.put(route, action);
@@ -135,6 +154,14 @@ public class Router {
         return this;
     }
 
+    /**
+     * Map a route to an action
+     *
+     * @param routeStringRes The route to map as an android string resource (e.g. R.string.whatever)
+     * @param action  An object implementing {@link RouterAction} to assign to the route
+     *
+     * @return Router for method chaining
+     */
     public Router mapRouteAction(int routeStringRes, RouterAction action) {
         String route = getContext().getResources().getString(routeStringRes);
         checkForDuplicates(route);
@@ -143,32 +170,37 @@ public class Router {
         return this;
     }
 
-	private void checkForDuplicates(String route) {
+    /**
+     * Check for duplicate routes when mapping a route
+     *
+     * @param route The route compare to
+     */
+    private void checkForDuplicates(String route) {
 
-		for (Map.Entry<String, Class<? extends Fragment>> entry : routes.entrySet()) {
+        for (Map.Entry<String, Class<? extends Fragment>> entry : routes.entrySet()) {
             if (entry.getKey().equals(route)) {
                 //throw new DuplicateRouteException("A route with the name " + route + " already exists");
             }
-		}
+        }
 
         for (Map.Entry<String, RouterAction> entry : routeActions.entrySet()) {
             if (entry.getKey().equals(route))
                 throw new DuplicateRouteException("A route with the name " + route + " already exists");
         }
-	}
+    }
 
-	/**
-	 * Attach the fragment associated with the route
-	 * to the calling activity's view hierarchy
-	 *
-	 * @param route The route to execute
-	 * @param fragManager The fragment manager instance of the calling activity
-	 * @param containerView The container view to which the fragment is attached
-	 * @param addToBackStack True if you want the fragment transaction to be added to the backstack, false otherwise
-	 * @param extraFragArgs Fragment arguments you may wish to add to the fragment to be instantiated
-     * @param popCurrent True if you wish current fragment to be popped from the backstack, false otherwise
-	 */
-	public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack,
+    /**
+     * Attach the fragment associated with the route
+     * to the calling activity's view hierarchy
+     *
+     * @param route          The route to execute
+     * @param fragManager    The fragment manager that will handle the transaction
+     * @param containerView  The container view to which the fragment will be attached
+     * @param addToBackStack True if you want the fragment transaction to be added to the backstack, false otherwise
+     * @param extraFragArgs  Fragment arguments you wish to add to the fragment to be instantiated
+     * @param popCurrent     True if you wish the <STRONG>current</STRONG> fragment to be popped from the backstack, false otherwise
+     */
+    public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack,
                           Bundle extraFragArgs, boolean popCurrent) {
 
         if (currentRoute != null && currentRoute.equals(route)) {
@@ -204,24 +236,24 @@ public class Router {
                 resolvedRoute.setResult(fallbackFragment);
                 fragment = assembleFragment();
             } else {
-                throw new RouteNotFoundException("The route ("+route+") is not registered and there is no fallback");
+                throw new RouteNotFoundException("The route (" + route + ") is not registered and there is no fallback");
             }
         }
 
-		if (fragment != null && extraFragArgs != null) {
+        if (fragment != null && extraFragArgs != null) {
 
-			Bundle fragArgs = fragment.getArguments();
-			fragArgs.putAll(extraFragArgs);
-			fragment.setArguments(fragArgs);
+            Bundle fragArgs = fragment.getArguments();
+            fragArgs.putAll(extraFragArgs);
+            fragment.setArguments(fragArgs);
             currentFragArgs = extraFragArgs;
-		} else {
+        } else {
             currentFragArgs = null;
         }
 
-		if (fragment != null) {
+        if (fragment != null) {
 
-			Log.d("Router: ", "Initiating fragment " + fragment.getClass().getName());
-			Log.d("Router:", "Route -> " + route);
+            Log.d("Router: ", "Initiating fragment " + fragment.getClass().getName());
+            Log.d("Router:", "Route -> " + route);
 
             if (popCurrent) {
                 fragManager.popBackStackImmediate();
@@ -235,67 +267,91 @@ public class Router {
                     .addToBackStack(route)
                     .commit();*/
 
-			if (addToBackStack) {
+            if (addToBackStack) {
 
-				fragManager.beginTransaction()
-						   .setCustomAnimations(mAnimationResources[0], mAnimationResources[1],
-								   mAnimationResources[2], mAnimationResources[3])
-						   .replace(containerView, fragment)
-						   .addToBackStack(route)
-						   .commit();
-			} else {
+                fragManager.beginTransaction()
+                        .setCustomAnimations(mAnimationResources[0], mAnimationResources[1],
+                                mAnimationResources[2], mAnimationResources[3])
+                        .replace(containerView, fragment)
+                        .addToBackStack(route)
+                        .commit();
+            } else {
 
-				fragManager.beginTransaction()
-						   .setCustomAnimations(mAnimationResources[0], mAnimationResources[1],
-								   mAnimationResources[2], mAnimationResources[3])
-						   .replace(containerView, fragment)
-						   .commit();
-			}
+                fragManager.beginTransaction()
+                        .setCustomAnimations(mAnimationResources[0], mAnimationResources[1],
+                                mAnimationResources[2], mAnimationResources[3])
+                        .replace(containerView, fragment)
+                        .commit();
+            }
 
             currentRoute = route;
             routeHistory.add(route);
 
         } else
-			//throw new RouteNotFoundException("The route '" + route + "' does not exist");
+            //throw new RouteNotFoundException("The route '" + route + "' does not exist");
             Toast.makeText(context, "Route is either unimplemented or not connected", Toast.LENGTH_SHORT).show();
-	}
+    }
 
+    /**
+     * Calls {@link Router#execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with
+     * popCurrent set to false
+     *
+     * @param route          The route to execute
+     * @param fragManager    The fragment manager that will handle the transaction
+     * @param containerView  The container view to which the fragment will be attached
+     * @param addToBackStack True if you want the fragment transaction to be added to the backstack, false otherwise
+     */
     public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack, Bundle extraArgs) {
 
         execRoute(route, fragManager, containerView, addToBackStack, extraArgs, false);
     }
 
-	/**
-	 * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with addToBackStack set to false
-	 * and no extra fragment arguments
-	 */
-	public void execRoute(String route, FragmentManager fragManager, int containerView) {
+    /**
+     * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with addToBackStack set to false,
+     * no extra fragment arguments and popCurrent set to false
+     *
+     * @param route          The route to execute
+     * @param fragManager    The fragment manager that will handle the transaction
+     * @param containerView  The container view to which the fragment will be attached
+     */
+    public void execRoute(String route, FragmentManager fragManager, int containerView) {
 
-		execRoute(route, fragManager, containerView, false, null, false);
-	}
+        execRoute(route, fragManager, containerView, false, null, false);
+    }
 
-	/**
-	 * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with addToBackStack set to false
-	 */
-	public void execRoute(String route, FragmentManager fragManager, int containerView, Bundle extraFragArgs) {
+    /**
+     * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with addToBackStack
+     * and popCurrent both set to false
+     *
+     * @param route          The route to execute
+     * @param fragManager    The fragment manager that will handle the transaction
+     * @param containerView  The container view to which the fragment will be attached
+     * @param extraFragArgs  Fragment arguments you wish to add to the fragment to be instantiated
+     */
+    public void execRoute(String route, FragmentManager fragManager, int containerView, Bundle extraFragArgs) {
 
-		execRoute(route, fragManager, containerView, false, extraFragArgs, false);
-	}
+        execRoute(route, fragManager, containerView, false, extraFragArgs, false);
+    }
 
-	/**
-	 * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with no extra fragment arguments
-	 */
-	public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack) {
+    /**
+     * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with no extra fragment arguments
+     * and popCurrent set to false
+     *
+     * @param route          The route to execute
+     * @param fragManager    The fragment manager that will handle the transaction
+     * @param containerView  The container view to which the fragment will be attached
+     * @param addToBackStack True if you want the fragment transaction to be added to the backstack, false otherwise
+     */
+    public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack) {
 
-		execRoute(route, fragManager, containerView, true, null, false);
-	}
+        execRoute(route, fragManager, containerView, true, null, false);
+    }
 
     /**
      * Get the appropriate regexp for the given mapped route.
      *
-     * @param mappedRoute The mapped route
+     * @param mappedRoute   The mapped route
      * @param addLineBounds Include line bounds (^$) in the regex
-     *
      * @return The regex for the mapped route
      */
     private String createMappedRouteRegex(String mappedRoute, boolean addLineBounds) {
@@ -318,6 +374,11 @@ public class Router {
         return regex;
     }
 
+    /**
+     * Assemble the fragment assigning wildcards and query parameters where available
+     *
+     * @return The fragment to instantiate
+     */
     private Fragment assembleFragment() {
         FragmentRoute fragRoute = (FragmentRoute) resolvedRoute;
         Fragment frag = Fragment.instantiate(context, fragRoute.getResult().getName());
@@ -342,7 +403,7 @@ public class Router {
     }
 
     /**
-     * Create an appropriate Route object
+     * Create an appropriate Route object for the given route
      *
      * @param route The given route
      * @return true if Route object valid, false otherwise
@@ -416,7 +477,7 @@ public class Router {
     /**
      * Extract the wildcard names and values and return them as Map of key-value pairs
      *
-     * @param route The given route
+     * @param route       The given route
      * @param mappedRoute The mapped route
      * @return Wildcard key - value pairs
      */
@@ -452,7 +513,8 @@ public class Router {
      * Check if given route contains wildcards
      *
      * @param route The mapped route
-     * @return
+     *
+     * @return True if route contains wildcards, false otherwise
      */
     private boolean routeHasWildCards(String route) {
         String wildcardRegex = "\\{\\w+\\}";
@@ -462,6 +524,7 @@ public class Router {
         return wcMatch.find();
     }
 
+    
     public void popRouteHistory() {
         routeHistory.remove(routeHistory.size() - 1);
     }
@@ -480,25 +543,25 @@ public class Router {
     }
 
     /**
-	 * Thrown if a given route is not found.
-	 */
-	@SuppressWarnings("serial")
-	public static class RouteNotFoundException extends RuntimeException {
+     * Thrown if a given route is not found.
+     */
+    @SuppressWarnings("serial")
+    public static class RouteNotFoundException extends RuntimeException {
 
-		public RouteNotFoundException(String message) {
-			super(message);
-		}
-	}
+        public RouteNotFoundException(String message) {
+            super(message);
+        }
+    }
 
-	/**
-	 * Thrown if a route is duplicate
-	 */
-	@SuppressWarnings("serial")
-	public static class DuplicateRouteException extends RuntimeException {
+    /**
+     * Thrown if a route is duplicate
+     */
+    @SuppressWarnings("serial")
+    public static class DuplicateRouteException extends RuntimeException {
 
-		public DuplicateRouteException(String message) {
-			super(message);
-		}
-	}
+        public DuplicateRouteException(String message) {
+            super(message);
+        }
+    }
 
 }
