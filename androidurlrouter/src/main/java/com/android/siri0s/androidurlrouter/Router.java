@@ -15,10 +15,10 @@ import java.util.regex.Pattern;
 
 /**
  * Class that provides routing functionality in that it associates
- * predefined routes with predefined fragments <br/> (will also add activities in the future)
- * thus rendering correct fragment instantiation painless
+ * predefined routes(URLs) with fragments or generic actions ({@link RouterAction})<br/>
+ * (will also add activities in the future).
  *
- * @author Georgios Sofronas
+ * @author S1ri0S
  */
 public class Router {
 
@@ -111,8 +111,7 @@ public class Router {
      *
      * @param route         The route to map
      * @param fragmentClazz The fragment class associated with the route
-     *
-     * @return              Router for method chaining
+     * @return Router for method chaining
      */
     public Router mapRoute(String route, Class<? extends Fragment> fragmentClazz) {
         checkForDuplicates(route);
@@ -126,7 +125,6 @@ public class Router {
      *
      * @param routeStringRes The route to map as an android string resource (e.g. R.string.whatever)
      * @param fragmentClazz  The fragment class associated with the route
-     *
      * @return Router for method chaining
      */
     public Router mapRoute(int routeStringRes, Class<? extends Fragment> fragmentClazz) {
@@ -142,9 +140,8 @@ public class Router {
     /**
      * Map a route to an action
      *
-     * @param route The route to map
-     * @param action  An object implementing {@link RouterAction} to assign to the route
-     *
+     * @param route  The route to map
+     * @param action An object implementing {@link RouterAction} to assign to the route
      * @return Router for method chaining
      */
     public Router mapRouteAction(String route, RouterAction action) {
@@ -158,8 +155,7 @@ public class Router {
      * Map a route to an action
      *
      * @param routeStringRes The route to map as an android string resource (e.g. R.string.whatever)
-     * @param action  An object implementing {@link RouterAction} to assign to the route
-     *
+     * @param action         An object implementing {@link RouterAction} to assign to the route
      * @return Router for method chaining
      */
     public Router mapRouteAction(int routeStringRes, RouterAction action) {
@@ -310,9 +306,9 @@ public class Router {
      * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with addToBackStack set to false,
      * no extra fragment arguments and popCurrent set to false
      *
-     * @param route          The route to execute
-     * @param fragManager    The fragment manager that will handle the transaction
-     * @param containerView  The container view to which the fragment will be attached
+     * @param route         The route to execute
+     * @param fragManager   The fragment manager that will handle the transaction
+     * @param containerView The container view to which the fragment will be attached
      */
     public void execRoute(String route, FragmentManager fragManager, int containerView) {
 
@@ -323,10 +319,10 @@ public class Router {
      * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with addToBackStack
      * and popCurrent both set to false
      *
-     * @param route          The route to execute
-     * @param fragManager    The fragment manager that will handle the transaction
-     * @param containerView  The container view to which the fragment will be attached
-     * @param extraFragArgs  Fragment arguments you wish to add to the fragment to be instantiated
+     * @param route         The route to execute
+     * @param fragManager   The fragment manager that will handle the transaction
+     * @param containerView The container view to which the fragment will be attached
+     * @param extraFragArgs Fragment arguments you wish to add to the fragment to be instantiated
      */
     public void execRoute(String route, FragmentManager fragManager, int containerView, Bundle extraFragArgs) {
 
@@ -513,7 +509,6 @@ public class Router {
      * Check if given route contains wildcards
      *
      * @param route The mapped route
-     *
      * @return True if route contains wildcards, false otherwise
      */
     private boolean routeHasWildCards(String route) {
@@ -524,7 +519,7 @@ public class Router {
         return wcMatch.find();
     }
 
-    
+
     public void popRouteHistory() {
         routeHistory.remove(routeHistory.size() - 1);
     }

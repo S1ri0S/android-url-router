@@ -3,7 +3,10 @@ package com.android.siri0s.androidurlrouter;
 import java.util.Map;
 
 /**
- * Created by siri0s on 3/31/16.
+ * Route class that contains all necessary route information
+ *
+ * @param <T> A fragment or a {@link RouterAction}
+ * @author S1ri0S
  */
 public class Route<T> {
 

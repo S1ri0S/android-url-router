@@ -3,9 +3,11 @@ package com.android.siri0s.androidurlrouter;
 import android.content.Context;
 
 /**
- * Created by siri0s on 12/5/2016.
+ * Interface used to map routes to generic actions
+ *
+ * @author S1ri0S
  */
 public interface RouterAction {
 
-    public void doAction(Context activityContext, ActionRoute actionRoute);
+    void doAction(Context activityContext, ActionRoute actionRoute);
 }
