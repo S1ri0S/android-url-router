@@ -268,14 +268,6 @@ public class Router {
                     fragmentManager.popBackStackImmediate();
                 }
 
-                /*fragmentManager.beginTransaction()
-                        .setCustomAnimations(fragmentTransactionAnimations[0], fragmentTransactionAnimations[1],
-                                fragmentTransactionAnimations[2], fragmentTransactionAnimations[3])
-                        .setCustomAnimations(fragmentTransactionAnimations[0], fragmentTransactionAnimations[1])
-                        .add(fragmentContainerView, fragment)
-                        .addToBackStack(route)
-                        .commit();*/
-
                 FragmentTransaction transaction = fragmentManager.beginTransaction();
                 transaction.setCustomAnimations(fragmentTransactionAnimations[0], fragmentTransactionAnimations[1],
                         fragmentTransactionAnimations[2], fragmentTransactionAnimations[3]);
@@ -313,8 +305,6 @@ public class Router {
     private String createMappedRouteRegex(String mappedRoute, boolean addLineBounds) {
         String stringWildcardRegex = "s:\\{[^(/|#|!)]+\\}";
         String integerWildcardRegex = "i:\\{[^(/|#|!)]+\\}";
-        //String fixedRegex = "([\\\\w|\\\\-|_]+|\\\\d+)";
-        //String fixedRegex = "([\\\\w|\\\\-|_\\\\.]+|\\\\d+)";
         String stringFixedRegex = "[^(/|#|!)]";
         String integerFixedRegex = "(\\\\d+)";
         StringBuilder regexBuilder = new StringBuilder();
@@ -334,8 +324,6 @@ public class Router {
         regex = regex.replaceAll(integerWildcardRegex, integerFixedRegex);
         regex = regex.replaceAll(stringWildcardRegex, stringFixedRegex);
         regex = regex.replaceAll("\\.", "\\\\.");
-        //regex = regex.replaceAll("\\?", "\\\\?");
-        //System.out.println(regex);
 
         return regex;
     }
