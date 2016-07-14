@@ -72,12 +72,14 @@ public class Router {
         return this.context;
     }
 
-    public void setFragmentManager(FragmentManager fragmentManager) {
+    public Router setFragmentManager(FragmentManager fragmentManager) {
         this.fragmentManager = fragmentManager;
+        return this;
     }
 
-    public void setFragmentContainerView(int fragmentContainerView) {
+    public Router setFragmentContainerView(int fragmentContainerView) {
         this.fragmentContainerView = fragmentContainerView;
+        return this;
     }
 
     public static synchronized Router getInstance() {
