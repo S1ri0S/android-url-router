@@ -1,14 +1,16 @@
 package com.android.siri0s.androidurlrouter;
 
+import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,30 +22,38 @@ import java.util.regex.Pattern;
  *
  * @author S1ri0S
  */
+@SuppressWarnings("unused")
 public class Router {
 
     public static final String ROUTE = "route";
-    public static final String ROUTE_ARGS = "routeArgs";
+    public static final String ROUTE_QUERY_PARAMS = "route_query_params";
+    public static final String ROUTE_EXTRA_ARGUMENTS = "route_extra_arguments";
+    private static final String LOG_TAG = "Router";
+
+    public static final int FLAG_ADD_TO_BACKSTACK = 100;
+    public static final int FLAG_POP_CURRENT_FRAGMENT = 101;
+    public static final int FLAG_ADD_FRAGMENT = 102;
+    public static final int FLAG_REPLACE_FRAGMENT = 103;
 
     private static Router router = new Router();
-    private HashMap<String, Class<? extends Fragment>> routes;
-    private HashMap<String, RouterAction> routeActions;
-    private Route resolvedRoute;
+
+    private HashMap<String, Class<? extends Activity>> activityRoutes;
+    private HashMap<String, Class<? extends Fragment>> fragmentRoutes;
+    private HashMap<String, RouterAction> actionRoutes;
+
     private Context context;
-    private int[] mAnimationResources;
+    private FragmentManager fragmentManager;
+    private int fragmentContainerView;
+    private int[] fragmentTransactionAnimations;
+
     public static String currentRoute;
-    private ArrayList<String> routeHistory;
-
-    private Class<? extends Fragment> fallbackFragment;
-
-    public static String currentFrag;
-    public static Bundle currentFragArgs;
 
     public Router() {
-        routes = new HashMap<String, Class<? extends Fragment>>();
-        routeActions = new HashMap<String, RouterAction>();
-        mAnimationResources = new int[]{0, 0, 0, 0};
-        routeHistory = new ArrayList<>();
+        activityRoutes = new HashMap<>();
+        fragmentRoutes = new HashMap<>();
+        actionRoutes = new HashMap<>();
+
+        fragmentTransactionAnimations = new int[]{0, 0, 0, 0};
     }
 
     /**
@@ -62,8 +72,12 @@ public class Router {
         return this.context;
     }
 
-    public HashMap<String, Class<? extends Fragment>> getRoutes() {
-        return this.routes;
+    public void setFragmentManager(FragmentManager fragmentManager) {
+        this.fragmentManager = fragmentManager;
+    }
+
+    public void setFragmentContainerView(int fragmentContainerView) {
+        this.fragmentContainerView = fragmentContainerView;
     }
 
     public static synchronized Router getInstance() {
@@ -79,12 +93,12 @@ public class Router {
      * @param popExit  Animation resource when fragment exits screen after the backstack is popped
      * @return The Router instance to use for method chaining
      */
-    public Router setFragmentAnimations(int enter, int exit, int popEnter, int popExit) {
+    public Router setFragmentTransactionAnimations(int enter, int exit, int popEnter, int popExit) {
 
-        mAnimationResources[0] = enter;
-        mAnimationResources[1] = exit;
-        mAnimationResources[2] = popEnter;
-        mAnimationResources[3] = popExit;
+        fragmentTransactionAnimations[0] = enter;
+        fragmentTransactionAnimations[1] = exit;
+        fragmentTransactionAnimations[2] = popEnter;
+        fragmentTransactionAnimations[3] = popExit;
 
         return this;
     }
@@ -95,252 +109,198 @@ public class Router {
      * @return Router for method chaining
      */
     public Router reset() {
-        routes.clear();
-        routeActions.clear();
-        mAnimationResources = new int[]{0, 0, 0, 0};
+        activityRoutes.clear();
+        fragmentRoutes.clear();
+        actionRoutes.clear();
+        fragmentTransactionAnimations = new int[]{0, 0, 0, 0};
         currentRoute = null;
-        currentFrag = null;
         context = null;
-        fallbackFragment = null;
 
         return this;
     }
 
     /**
-     * Map a route to a fragment
+     * Map a route to a routable
      *
-     * @param route         The route to map
-     * @param fragmentClazz The fragment class associated with the route
+     * @param route The route to map
+     * @param clazz The activity class to assign to the route
      * @return Router for method chaining
      */
-    public Router mapRoute(String route, Class<? extends Fragment> fragmentClazz) {
+    public Router mapActivityRoute(String route, Class<? extends Activity> clazz) {
         checkForDuplicates(route);
-        routes.put(route, fragmentClazz);
+        activityRoutes.put(route, clazz);
 
         return this;
     }
 
-    /**
-     * Map a route to a fragment
-     *
-     * @param routeStringRes The route to map as an android string resource (e.g. R.string.whatever)
-     * @param fragmentClazz  The fragment class associated with the route
-     * @return Router for method chaining
-     */
-    public Router mapRoute(int routeStringRes, Class<? extends Fragment> fragmentClazz) {
-        String route = getContext().getString(routeStringRes);
+    public Router mapActivityRoute(int routeStringRes, Class<? extends Activity> clazz) {
+        return mapActivityRoute(getContext().getString(routeStringRes), clazz);
+    }
 
+    public Router mapFragmentRoute(String route, Class<? extends Fragment> clazz) {
         checkForDuplicates(route);
-
-        routes.put(route, fragmentClazz);
+        fragmentRoutes.put(route, clazz);
 
         return this;
     }
 
-    /**
-     * Map a route to an action
-     *
-     * @param route  The route to map
-     * @param action An object implementing {@link RouterAction} to assign to the route
-     * @return Router for method chaining
-     */
-    public Router mapRouteAction(String route, RouterAction action) {
+    public Router mapFragmentRoute(int routeStringRes, Class<? extends Fragment> clazz) {
+        return mapFragmentRoute(getContext().getString(routeStringRes), clazz);
+    }
+
+    public Router mapActionRoute(String route, RouterAction action) {
         checkForDuplicates(route);
-        routeActions.put(route, action);
+        actionRoutes.put(route, action);
 
         return this;
     }
 
-    /**
-     * Map a route to an action
-     *
-     * @param routeStringRes The route to map as an android string resource (e.g. R.string.whatever)
-     * @param action         An object implementing {@link RouterAction} to assign to the route
-     * @return Router for method chaining
-     */
-    public Router mapRouteAction(int routeStringRes, RouterAction action) {
-        String route = getContext().getResources().getString(routeStringRes);
-        checkForDuplicates(route);
-        routeActions.put(route, action);
-
-        return this;
+    public Router mapActionRoute(int routeStringRes, RouterAction action) {
+        return mapActionRoute(getContext().getString(routeStringRes), action);
     }
 
     /**
      * Check for duplicate routes when mapping a route
      *
-     * @param route The route compare to
+     * @param route The route to compare to
      */
     private void checkForDuplicates(String route) {
 
-        for (Map.Entry<String, Class<? extends Fragment>> entry : routes.entrySet()) {
+        for (Map.Entry<String, Class<? extends Activity>> entry : activityRoutes.entrySet()) {
             if (entry.getKey().equals(route)) {
-                //throw new DuplicateRouteException("A route with the name " + route + " already exists");
+                throw new DuplicateRouteException("A route with the name "
+                        + route
+                        + " already exists mapped to "
+                        + entry.getValue().getSimpleName());
             }
         }
 
-        for (Map.Entry<String, RouterAction> entry : routeActions.entrySet()) {
+        for (Map.Entry<String, Class<? extends Fragment>> entry : fragmentRoutes.entrySet()) {
             if (entry.getKey().equals(route))
-                throw new DuplicateRouteException("A route with the name " + route + " already exists");
+                throw new DuplicateRouteException("A route with the name "
+                        + route
+                        + " already exists mapped to "
+                        + entry.getValue().getSimpleName());
+        }
+
+        for (Map.Entry<String, RouterAction> entry : actionRoutes.entrySet()) {
+            if (entry.getKey().equals(route)) {
+                throw new DuplicateRouteException("A route with the name "
+                        + route
+                        + " already exists mapped to "
+                        + entry.getValue().getClass().getSimpleName());
+            }
+        }
+    }
+
+    private void checkCanSupportFragmentTransactions() {
+        if (fragmentManager == null) {
+            throw new RuntimeException("You haven't provided a fragment manager. Use Router.setFragmentManager");
+        }
+        if (fragmentContainerView == 0) {
+            throw new RuntimeException("You haven't provided a fragment container view id. Use Router.setFragmentContainerView");
         }
     }
 
     /**
-     * Attach the fragment associated with the route
-     * to the calling activity's view hierarchy
+     * Execute the appropriate routable for the given route.<br/>
+     * For use with Fragment routables, allows addToBackStack and popCurrent parameters.
      *
-     * @param route          The route to execute
-     * @param fragManager    The fragment manager that will handle the transaction
-     * @param containerView  The container view to which the fragment will be attached
-     * @param addToBackStack True if you want the fragment transaction to be added to the backstack, false otherwise
-     * @param extraFragArgs  Fragment arguments you wish to add to the fragment to be instantiated
-     * @param popCurrent     True if you wish the <STRONG>current</STRONG> fragment to be popped from the backstack, false otherwise
+     * @param route The route to execute
+     * @param args  Extra arguments you wish to pass as fragment arguments or intent data to the Routable object
+     * @param flags Flags for signaling specific required actions (e.g. adding a fragment transaction to the backstack)
      */
-    public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack,
-                          Bundle extraFragArgs, boolean popCurrent) {
+    public void execRoute(String route, Bundle args, int... flags) {
 
-        if (currentRoute != null && currentRoute.equals(route)) {
-            return;
+        Route resolvedRoute;
+        resolvedRoute = resolveRoute(route);
+        List<Integer> activeFlags = new ArrayList<>();
+
+        Log.d("Router:", "Route -> " + route);
+
+        if (flags.length > 0) {
+            for (int i : flags) {
+                activeFlags.add(i);
+            }
         }
 
-        Fragment fragment;
-        resolvedRoute = new Route();
-        boolean found = resolveRoute(route);
-        resolvedRoute.setRoute(route);
+        if (resolvedRoute != null) {
+            resolvedRoute.setRoute(route);
 
-        if (resolvedRoute instanceof ActionRoute) {
-            ActionRoute r = (ActionRoute) resolvedRoute;
+            if (resolvedRoute instanceof ActionRoute) {
+                ActionRoute actionRoute = ((ActionRoute) resolvedRoute);
 
-            if (extraFragArgs != null) {
-                for (String entry : extraFragArgs.keySet()) {
-                    r.getWildcards().put(entry, extraFragArgs.getString(entry));
+                if (args != null) {
+                    actionRoute.getResult().addRouteArguments(args);
                 }
-            }
 
-            r.getResult().doAction(context, r);
+                for (Map.Entry<String, String> entry : actionRoute.getWildcards().entrySet()) {
+                    actionRoute.getResult().getRouteArguments().putString(entry.getKey(), entry.getValue());
+                }
 
-            return;
-        }
+                Bundle queryParams = new Bundle();
+                for (Map.Entry<String, String> entry : actionRoute.getQueryParams().entrySet()) {
+                    queryParams.putString(entry.getKey(), entry.getValue());
+                }
+                actionRoute.getResult().getRouteArguments().putBundle(ROUTE_QUERY_PARAMS, queryParams);
 
-        if (found) {
-            fragment = assembleFragment();
-            currentFrag = fragment.getClass().getSimpleName();
-        } else {
-            if (fallbackFragment != null) {
-                resolvedRoute = new FragmentRoute();
-                resolvedRoute.setRoute(route);
-                resolvedRoute.setResult(fallbackFragment);
-                fragment = assembleFragment();
-            } else {
-                throw new RouteNotFoundException("The route (" + route + ") is not registered and there is no fallback");
-            }
-        }
+                Log.d(LOG_TAG, "Executing router action " + actionRoute.getResult().getClass().getSimpleName());
+                actionRoute.getResult().doAction(context, resolvedRoute);
 
-        if (fragment != null && extraFragArgs != null) {
+            } else if (resolvedRoute instanceof FragmentRoute) {
+                checkCanSupportFragmentTransactions();
 
-            Bundle fragArgs = fragment.getArguments();
-            fragArgs.putAll(extraFragArgs);
-            fragment.setArguments(fragArgs);
-            currentFragArgs = extraFragArgs;
-        } else {
-            currentFragArgs = null;
-        }
+                Fragment fragment = assembleFragment(resolvedRoute);
 
-        if (fragment != null) {
+                if (args != null) {
+                    Bundle fragArgs = fragment.getArguments();
+                    fragArgs.putAll(args);
+                    fragment.setArguments(fragArgs);
+                }
 
-            Log.d("Router: ", "Initiating fragment " + fragment.getClass().getName());
-            Log.d("Router:", "Route -> " + route);
+                if (fragmentManager.getBackStackEntryCount() == 0 && activeFlags.contains(FLAG_ADD_TO_BACKSTACK)) {
+                    Log.w(LOG_TAG, "Backstack is empty. If this is the first fragment in the activity's view hierarchy," +
+                            " perhaps you shouldn't add it to the backstack.");
+                }
+                Log.d("Router: ", "Initiating fragment " + fragment.getClass().getName());
 
-            if (popCurrent) {
-                fragManager.popBackStackImmediate();
-            }
+                if (activeFlags.contains(FLAG_POP_CURRENT_FRAGMENT)) {
+                    fragmentManager.popBackStackImmediate();
+                }
 
-            /*fragManager.beginTransaction()
-                    .setCustomAnimations(mAnimationResources[0], mAnimationResources[1],
-                            mAnimationResources[2], mAnimationResources[3])
-                    .setCustomAnimations(mAnimationResources[0], mAnimationResources[1])
-                    .add(containerView, fragment)
-                    .addToBackStack(route)
-                    .commit();*/
-
-            if (addToBackStack) {
-
-                fragManager.beginTransaction()
-                        .setCustomAnimations(mAnimationResources[0], mAnimationResources[1],
-                                mAnimationResources[2], mAnimationResources[3])
-                        .replace(containerView, fragment)
+                /*fragmentManager.beginTransaction()
+                        .setCustomAnimations(fragmentTransactionAnimations[0], fragmentTransactionAnimations[1],
+                                fragmentTransactionAnimations[2], fragmentTransactionAnimations[3])
+                        .setCustomAnimations(fragmentTransactionAnimations[0], fragmentTransactionAnimations[1])
+                        .add(fragmentContainerView, fragment)
                         .addToBackStack(route)
-                        .commit();
-            } else {
+                        .commit();*/
 
-                fragManager.beginTransaction()
-                        .setCustomAnimations(mAnimationResources[0], mAnimationResources[1],
-                                mAnimationResources[2], mAnimationResources[3])
-                        .replace(containerView, fragment)
-                        .commit();
+                FragmentTransaction transaction = fragmentManager.beginTransaction();
+                transaction.setCustomAnimations(fragmentTransactionAnimations[0], fragmentTransactionAnimations[1],
+                        fragmentTransactionAnimations[2], fragmentTransactionAnimations[3]);
+
+
+                if (activeFlags.contains(FLAG_REPLACE_FRAGMENT)) {
+                    transaction.replace(fragmentContainerView, fragment);
+                } else {
+                    transaction.add(fragmentContainerView, fragment);
+                }
+
+                if (activeFlags.contains(FLAG_ADD_TO_BACKSTACK)) {
+                    transaction.addToBackStack(route);
+                }
+
+                transaction.commit();
+
+                currentRoute = route;
+
+            } else if (resolvedRoute instanceof ActivityRoute) {
+                // TODO
             }
-
-            currentRoute = route;
-            routeHistory.add(route);
-
-        } else
-            //throw new RouteNotFoundException("The route '" + route + "' does not exist");
-            Toast.makeText(context, "Route is either unimplemented or not connected", Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Calls {@link Router#execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with
-     * popCurrent set to false
-     *
-     * @param route          The route to execute
-     * @param fragManager    The fragment manager that will handle the transaction
-     * @param containerView  The container view to which the fragment will be attached
-     * @param addToBackStack True if you want the fragment transaction to be added to the backstack, false otherwise
-     */
-    public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack, Bundle extraArgs) {
-
-        execRoute(route, fragManager, containerView, addToBackStack, extraArgs, false);
-    }
-
-    /**
-     * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with addToBackStack set to false,
-     * no extra fragment arguments and popCurrent set to false
-     *
-     * @param route         The route to execute
-     * @param fragManager   The fragment manager that will handle the transaction
-     * @param containerView The container view to which the fragment will be attached
-     */
-    public void execRoute(String route, FragmentManager fragManager, int containerView) {
-
-        execRoute(route, fragManager, containerView, false, null, false);
-    }
-
-    /**
-     * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with addToBackStack
-     * and popCurrent both set to false
-     *
-     * @param route         The route to execute
-     * @param fragManager   The fragment manager that will handle the transaction
-     * @param containerView The container view to which the fragment will be attached
-     * @param extraFragArgs Fragment arguments you wish to add to the fragment to be instantiated
-     */
-    public void execRoute(String route, FragmentManager fragManager, int containerView, Bundle extraFragArgs) {
-
-        execRoute(route, fragManager, containerView, false, extraFragArgs, false);
-    }
-
-    /**
-     * Calls {@link #execRoute(String, FragmentManager, int, boolean, Bundle, boolean)} with no extra fragment arguments
-     * and popCurrent set to false
-     *
-     * @param route          The route to execute
-     * @param fragManager    The fragment manager that will handle the transaction
-     * @param containerView  The container view to which the fragment will be attached
-     * @param addToBackStack True if you want the fragment transaction to be added to the backstack, false otherwise
-     */
-    public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack) {
-
-        execRoute(route, fragManager, containerView, true, null, false);
+        } else {
+            throw new RouteNotFoundException("The provided route: " + route + " is not mapped");
+        }
     }
 
     /**
@@ -351,18 +311,28 @@ public class Router {
      * @return The regex for the mapped route
      */
     private String createMappedRouteRegex(String mappedRoute, boolean addLineBounds) {
-        String wildcardRegex = "\\{\\w+\\}";
+        String stringWildcardRegex = "s:\\{[^(/|#|!)]+\\}";
+        String integerWildcardRegex = "i:\\{[^(/|#|!)]+\\}";
         //String fixedRegex = "([\\\\w|\\\\-|_]+|\\\\d+)";
-        String fixedRegex = "([\\\\w|\\\\-|_\\\\.]+|\\\\d+)";
+        //String fixedRegex = "([\\\\w|\\\\-|_\\\\.]+|\\\\d+)";
+        String stringFixedRegex = "[^(/|#|!)]";
+        String integerFixedRegex = "(\\\\d+)";
         StringBuilder regexBuilder = new StringBuilder();
         if (addLineBounds) {
             //regexBuilder.append("^" + mappedRoute + "(\\/(\\w+|\\-)+)?$");
-            regexBuilder.append("^" + mappedRoute + "(\\/([a-zA-Z0-9]|\\-)+)?$");
+            regexBuilder
+                    .append("^")
+                    .append(mappedRoute)
+                    .append("(\\/([a-zA-Z0-9]|\\-)+)?$");
         } else {
-            regexBuilder.append("(" + mappedRoute + ")");
+            regexBuilder
+                    .append("(")
+                    .append(mappedRoute)
+                    .append(")");
         }
         String regex = regexBuilder.toString();
-        regex = regex.replaceAll(wildcardRegex, fixedRegex);
+        regex = regex.replaceAll(integerWildcardRegex, integerFixedRegex);
+        regex = regex.replaceAll(stringWildcardRegex, stringFixedRegex);
         regex = regex.replaceAll("\\.", "\\\\.");
         //regex = regex.replaceAll("\\?", "\\\\?");
         //System.out.println(regex);
@@ -375,24 +345,29 @@ public class Router {
      *
      * @return The fragment to instantiate
      */
-    private Fragment assembleFragment() {
-        FragmentRoute fragRoute = (FragmentRoute) resolvedRoute;
+    private Fragment assembleFragment(Route resolvedRoute) {
+
+        FragmentRoute fragRoute = ((FragmentRoute) resolvedRoute);
         Fragment frag = Fragment.instantiate(context, fragRoute.getResult().getName());
         Bundle args = new Bundle();
 
         if (fragRoute.getWildcards() != null && !fragRoute.getWildcards().isEmpty()) {
-            for (Map.Entry<String, String> entry : fragRoute.getWildcards().entrySet()) {
+            Map<String, String> wc = fragRoute.getWildcards();
+            for (Map.Entry<String, String> entry : wc.entrySet()) {
                 args.putString(entry.getKey(), entry.getValue());
             }
         }
 
         if (fragRoute.getQueryParams() != null && !fragRoute.getQueryParams().isEmpty()) {
-            for (Map.Entry<String, String> entry : fragRoute.getQueryParams().entrySet()) {
-                args.putString("query_" + entry.getKey(), entry.getValue());
+            Bundle queryParams = new Bundle();
+            Map<String, String> qp = fragRoute.getQueryParams();
+            for (Map.Entry<String, String> entry : qp.entrySet()) {
+                queryParams.putString(entry.getKey(), entry.getValue());
             }
+            args.putBundle(ROUTE_QUERY_PARAMS, queryParams);
         }
 
-        args.putString(ROUTE, fragRoute.getRoute());
+        args.putString(ROUTE, resolvedRoute.getRoute());
         frag.setArguments(args);
 
         return frag;
@@ -404,51 +379,63 @@ public class Router {
      * @param route The given route
      * @return true if Route object valid, false otherwise
      */
-    private boolean resolveRoute(String route) {
+    private Route resolveRoute(String route) {
         String queryRegex = "\\?((\\w+=[\\w|,]+)&?)+$";
         Pattern queryPattern = Pattern.compile(queryRegex);
         Matcher queryMatcher = queryPattern.matcher(route);
-        boolean routeFound = false;
-        resolvedRoute.setMappedRoute("");
+        Map<String, String> queryParams = new HashMap<>();
 
         if (queryMatcher.find()) {
-            resolvedRoute.setQueryParams(resolveQueryParams(route
-                    .substring(queryMatcher.start() + 1, queryMatcher.end())));
+            queryParams = resolveQueryParams(route.substring(queryMatcher.start() + 1, queryMatcher.end()));
             route = route.replaceAll(queryRegex, "");
         }
-        resolvedRoute.setCleanRoute(route);
 
-        for (Map.Entry<String, Class<? extends Fragment>> entry : routes.entrySet()) {
+        for (Map.Entry<String, Class<? extends Activity>> entry : activityRoutes.entrySet()) {
             String regex = createMappedRouteRegex(entry.getKey(), true);
 
             if (route.matches(regex)) {
-                Map<String, String> queries = resolvedRoute.getQueryParams();
-                resolvedRoute = new FragmentRoute();
+                ActivityRoute resolvedRoute = new ActivityRoute();
 
-                routeFound = true;
-                resolvedRoute.setQueryParams(queries);
+                resolvedRoute.setQueryParams(queryParams);
                 resolvedRoute.setMappedRoute(entry.getKey());
                 resolvedRoute.setResult(entry.getValue());
                 resolvedRoute.setWildcards(resolveWildcards(route, entry.getKey()));
-                break;
+
+                return resolvedRoute;
             }
         }
 
-        for (Map.Entry<String, RouterAction> entry : routeActions.entrySet()) {
+        for (Map.Entry<String, Class<? extends Fragment>> entry : fragmentRoutes.entrySet()) {
             String regex = createMappedRouteRegex(entry.getKey(), true);
 
             if (route.matches(regex)) {
-                resolvedRoute = new ActionRoute();
+                FragmentRoute resolvedRoute = new FragmentRoute();
 
-                routeFound = true;
+                resolvedRoute.setQueryParams(queryParams);
                 resolvedRoute.setMappedRoute(entry.getKey());
                 resolvedRoute.setResult(entry.getValue());
                 resolvedRoute.setWildcards(resolveWildcards(route, entry.getKey()));
-                break;
+
+                return resolvedRoute;
             }
         }
 
-        return resolvedRoute.getMappedRoute().length() > 0 && resolvedRoute.getResult() != null;
+        for (Map.Entry<String, RouterAction> entry : actionRoutes.entrySet()) {
+            String regex = createMappedRouteRegex(entry.getKey(), true);
+
+            if (route.matches(regex)) {
+                ActionRoute resolvedRoute = new ActionRoute();
+
+                resolvedRoute.setQueryParams(queryParams);
+                resolvedRoute.setMappedRoute(entry.getKey());
+                resolvedRoute.setResult(entry.getValue());
+                resolvedRoute.setWildcards(resolveWildcards(route, entry.getKey()));
+
+                return resolvedRoute;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -458,7 +445,7 @@ public class Router {
      * @return Map containing query parameters in key - value format
      */
     private HashMap<String, String> resolveQueryParams(String queryString) {
-        HashMap<String, String> params = new HashMap<String, String>();
+        HashMap<String, String> params = new HashMap<>();
         String[] qparams = queryString.split("&");
 
         for (String p : qparams) {
@@ -478,7 +465,7 @@ public class Router {
      * @return Wildcard key - value pairs
      */
     private Map<String, String> resolveWildcards(String route, String mappedRoute) {
-        Map<String, String> wc = new HashMap<String, String>();
+        Map<String, String> wc = new HashMap<>();
 
         if (!routeHasWildCards(mappedRoute)) {
             return wc;
@@ -519,22 +506,8 @@ public class Router {
         return wcMatch.find();
     }
 
-
-    public void popRouteHistory() {
-        routeHistory.remove(routeHistory.size() - 1);
-    }
-
-    public Class<? extends Fragment> getFallbackFragment() {
-        return fallbackFragment;
-    }
-
-    public Router setFallbackFragment(Class<? extends Fragment> fallbackFragment) {
-        this.fallbackFragment = fallbackFragment;
-        return this;
-    }
-
     public boolean isValidRoute(String route) {
-        return resolveRoute(route);
+        return resolveRoute(route) != null;
     }
 
     /**

@@ -5,7 +5,6 @@ import java.util.Map;
 /**
  * Route class that contains all necessary route information
  *
- * @param <T> A fragment or a {@link RouterAction}
  * @author S1ri0S
  */
 public class Route<T> {
