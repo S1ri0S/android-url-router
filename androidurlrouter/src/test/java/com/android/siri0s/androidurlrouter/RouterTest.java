@@ -58,6 +58,11 @@ public class RouterTest {
         assertEquals(route.getQueryParams().get("order"), "desc");
     }
 
+    /*@Test(expected = IllegalStateException.class)
+    public void testNoFragmentToolsThrowsException() throws Exception {
+        router.execRoute("app://www.app.com/laws/13751/articles/12842", null, Router.FLAG_ADD_TO_BACKSTACK, Router.FLAG_REPLACE_FRAGMENT);
+    }*/
+
     public static class MockFragment1 extends Fragment {}
     public static class MockFragment2 extends Fragment {}
     public static class MockFragment3 extends Fragment {}

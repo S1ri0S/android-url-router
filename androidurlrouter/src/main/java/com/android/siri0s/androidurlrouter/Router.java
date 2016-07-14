@@ -195,10 +195,10 @@ public class Router {
 
     private void checkCanSupportFragmentTransactions() {
         if (fragmentManager == null) {
-            throw new RuntimeException("You haven't provided a fragment manager. Use Router.setFragmentManager");
+            throw new IllegalStateException("You haven't provided a fragment manager. Use Router.setFragmentManager");
         }
         if (fragmentContainerView == 0) {
-            throw new RuntimeException("You haven't provided a fragment container view id. Use Router.setFragmentContainerView");
+            throw new IllegalStateException("You haven't provided a fragment container view id. Use Router.setFragmentContainerView");
         }
     }
 
