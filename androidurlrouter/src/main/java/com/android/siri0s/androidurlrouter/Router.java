@@ -340,7 +340,7 @@ public class Router {
      */
     public void execRoute(String route, FragmentManager fragManager, int containerView, boolean addToBackStack) {
 
-        execRoute(route, fragManager, containerView, true, null, false);
+        execRoute(route, fragManager, containerView, addToBackStack, null, false);
     }
 
     /**
