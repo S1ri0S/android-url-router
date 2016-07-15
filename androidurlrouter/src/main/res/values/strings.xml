@@ -1,3 +1,38 @@
 <resources>
     <string name="app_name">AndroidUrlRouter</string>
+
+    <!-- Routes -->
+    <string name="route_login">app://www.app.com/user/login</string>
+    <string name="route_purchase">app://www.app.com/purchase</string>
+    <string name="route_feed">app://www.app.com/feed</string>
+    <string name="route_questions">app://www.app.com/questions</string>
+    <string name="route_law_categories">app://www.app.com/laws/categories</string>
+    <string name="route_laws">app://www.app.com/laws</string>
+    <string name="route_law_codifications">app://www.app.com/laws/codifications</string>
+    <string name="route_category_articles">app://www.app.com/articles</string>
+    <string name="route_favorite_articles">app://www.app.com/profile/favorites</string>
+    <string name="route_article">app://www.app.com/articles/article/i:{articleId}</string>
+    <string name="route_question">app://www.app.com/questions/question/i:{questionId}</string>
+    <string name="route_law">app://www.app.com/laws/law/i:{lawId}</string>
+    <string name="route_law_article">app://www.app.com/laws/i:{lawId}/articles/article/i:{articleId}</string>
+    <string name="route_law_article_related">app://www.app.com/laws/related/i:{where}/i:{lawId}/i:{articleId}</string>
+    <string name="route_law_article_notes">app://www.app.com/laws/notes/article/i:{articleId}</string>
+    <string name="route_law_paragraph_notes">app://www.app.com/laws/notes/paragraph/i:{paragraphId}</string>
+    <string name="route_law_article_note">app://www.app.com/laws/notes/{articleId}/i:{noteNumber}</string>
+    <string name="route_law_paragraph_note">app://www.app.com/laws/notes/i:{paragraphId}/i:{noteNumber}</string>
+    <string name="route_downloads">app://www.app.com/downloads</string>
+    <string name="route_download">app://www.app.com/downloads/download/i:{downloadId}</string>
+    <string name="route_library">app://www.app.com/library</string>
+    <string name="route_newspapers">app://www.app.com/newspapers</string>
+    <string name="route_newspaper_issues">app://www.app.com/newspapers/i:{categoryId}/s:{date}</string>
+    <string name="route_newspaper_issue">app://www.app.com/newspapers/newspaper/issue</string>
+    <string name="route_settings">app://www.app.com/settings</string>
+    <string name="route_pdf_viewer">app://www.app.com/pdfViewer/s:{filename}</string>
+    <string name="route_generic_webview">app://www.app.com/webview</string>
+    <string name="route_download_file">app://www.app.com/files/i:{fileId}</string>
+    <string name="route_download_law">app://www.app.com/laws/export/fodb</string>
+    <string name="route_error">app://www.app.com/error</string>
+    <string name="route_helpdesk">app://www.app.com/contact</string>
+    <string name="route_search">app://www.app.com/search</string>
+
 </resources>

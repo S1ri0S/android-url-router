@@ -5,6 +5,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -16,9 +17,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Class that provides routing functionality in that it associates
- * predefined routes(URLs) with fragments or generic actions ({@link RouterAction})<br/>
- * (will also add activities in the future).
+ * Class that provides routing functionality in that it associates<br/>
+ * predefined routes(URLs) with activities, fragments or generic actions ({@link RouterAction})
  *
  * @author S1ri0S
  */
@@ -32,8 +32,8 @@ public class Router {
 
     public static final int FLAG_ADD_TO_BACKSTACK = 100;
     public static final int FLAG_POP_CURRENT_FRAGMENT = 101;
-    public static final int FLAG_ADD_FRAGMENT = 102;
     public static final int FLAG_REPLACE_FRAGMENT = 103;
+    public static final int FLAG_START_ACTIVITY_FOR_RESULT = 104;
 
     private static Router router = new Router();
 
@@ -128,37 +128,37 @@ public class Router {
      * @param clazz The activity class to assign to the route
      * @return Router for method chaining
      */
-    public Router mapActivityRoute(String route, Class<? extends Activity> clazz) {
+    public Router registerActivityRoute(String route, Class<? extends Activity> clazz) {
         checkForDuplicates(route);
         activityRoutes.put(route, clazz);
 
         return this;
     }
 
-    public Router mapActivityRoute(int routeStringRes, Class<? extends Activity> clazz) {
-        return mapActivityRoute(getContext().getString(routeStringRes), clazz);
+    public Router registerActivityRoute(int routeStringRes, Class<? extends Activity> clazz) {
+        return registerActivityRoute(getContext().getString(routeStringRes), clazz);
     }
 
-    public Router mapFragmentRoute(String route, Class<? extends Fragment> clazz) {
+    public Router registerFragmentRoute(String route, Class<? extends Fragment> clazz) {
         checkForDuplicates(route);
         fragmentRoutes.put(route, clazz);
 
         return this;
     }
 
-    public Router mapFragmentRoute(int routeStringRes, Class<? extends Fragment> clazz) {
-        return mapFragmentRoute(getContext().getString(routeStringRes), clazz);
+    public Router registerFragmentRoute(int routeStringRes, Class<? extends Fragment> clazz) {
+        return registerFragmentRoute(getContext().getString(routeStringRes), clazz);
     }
 
-    public Router mapActionRoute(String route, RouterAction action) {
+    public Router registerActionRoute(String route, RouterAction action) {
         checkForDuplicates(route);
         actionRoutes.put(route, action);
 
         return this;
     }
 
-    public Router mapActionRoute(int routeStringRes, RouterAction action) {
-        return mapActionRoute(getContext().getString(routeStringRes), action);
+    public Router registerActionRoute(int routeStringRes, RouterAction action) {
+        return registerActionRoute(getContext().getString(routeStringRes), action);
     }
 
     /**
@@ -290,11 +290,22 @@ public class Router {
                 currentRoute = route;
 
             } else if (resolvedRoute instanceof ActivityRoute) {
-                // TODO
+                Intent intent = assembleIntent(resolvedRoute, args);
+                context.startActivity(intent);
             }
         } else {
             throw new RouteNotFoundException("The provided route: " + route + " is not mapped");
         }
+    }
+
+    /**
+     * Calls {@link Router#execRoute(String, Bundle, int...)} with no extra arguments<br/>
+     * and no special flags
+     *
+     * @param route The route to execute
+     */
+    public void execRoute(String route) {
+        execRoute(route, null);
     }
 
     /**
@@ -326,8 +337,37 @@ public class Router {
         regex = regex.replaceAll(integerWildcardRegex, integerFixedRegex);
         regex = regex.replaceAll(stringWildcardRegex, stringFixedRegex);
         regex = regex.replaceAll("\\.", "\\\\.");
+        regex = regex.replaceAll("\\{", "\\\\{");
+        regex = regex.replaceAll("\\}", "\\\\}");
 
         return regex;
+    }
+
+    private Intent assembleIntent(Route resolvedRoute, Bundle args) {
+        ActivityRoute route = (ActivityRoute) resolvedRoute;
+        Intent intent = new Intent(context, route.getResult());
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        if (null != args) {
+            intent.putExtra(ROUTE_EXTRA_ARGUMENTS, args);
+        }
+
+        if (route.getWildcards() != null && !route.getWildcards().isEmpty()) {
+            Map<String, String> wc = route.getWildcards();
+            for (Map.Entry<String, String> entry : wc.entrySet()) {
+                intent.putExtra(entry.getKey(), entry.getValue());
+            }
+        }
+
+        Bundle qparams = new Bundle();
+        if (route.getQueryParams() != null && !route.getQueryParams().isEmpty()) {
+            Map<String, String> qp = route.getQueryParams();
+            for (Map.Entry<String, String> entry : qp.entrySet()) {
+                qparams.putString(entry.getKey(), entry.getValue());
+            }
+        }
+        intent.putExtra(ROUTE_QUERY_PARAMS, qparams);
+
+        return intent;
     }
 
     /**
