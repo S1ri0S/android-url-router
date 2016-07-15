@@ -231,6 +231,7 @@ public class Router {
 
             if (resolvedRoute instanceof ActionRoute) {
                 ActionRoute actionRoute = ((ActionRoute) resolvedRoute);
+                actionRoute.getResult().setRouteArguments(new Bundle());
 
                 if (args != null) {
                     actionRoute.getResult().addRouteArguments(args);
