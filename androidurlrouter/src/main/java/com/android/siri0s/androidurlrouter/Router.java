@@ -59,17 +59,17 @@ public class Router {
     /**
      * Set this Router's application context
      *
-     * @param context The application context
+     * @param activityContext The <STRONG>activity</STRONG> (not application) context
      * @return The Router instance to use for method chaining
      */
-    public Router setContext(Context context) {
-        this.context = context.getApplicationContext();
+    public Router setContext(Context activityContext) {
+        context = (Activity)activityContext;
 
         return this;
     }
 
     public Context getContext() {
-        return this.context;
+        return context;
     }
 
     public Router setFragmentManager(FragmentManager fragmentManager) {
