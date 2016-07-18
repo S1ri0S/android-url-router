@@ -47,6 +47,7 @@ public class Router {
     private int[] fragmentTransactionAnimations;
 
     public static String currentRoute;
+    public static Bundle currentArguments;
 
     public Router() {
         activityRoutes = new HashMap<>();
@@ -229,6 +230,9 @@ public class Router {
         if (resolvedRoute != null) {
             resolvedRoute.setRoute(route);
 
+            currentRoute = route;
+            currentArguments = args;
+
             if (resolvedRoute instanceof ActionRoute) {
                 ActionRoute actionRoute = ((ActionRoute) resolvedRoute);
                 actionRoute.getResult().setRouteArguments(new Bundle());
@@ -288,8 +292,6 @@ public class Router {
 
                 transaction.commit();
 
-                currentRoute = route;
-
             } else if (resolvedRoute instanceof ActivityRoute) {
                 Intent intent = assembleIntent(resolvedRoute, args);
                 context.startActivity(intent);
@@ -300,13 +302,12 @@ public class Router {
     }
 
     /**
-     * Calls {@link Router#execRoute(String, Bundle, int...)} with no extra arguments<br/>
-     * and no special flags
+     * Calls {@link Router#execRoute(String, Bundle, int...)} with no extra arguments.
      *
      * @param route The route to execute
      */
-    public void execRoute(String route) {
-        execRoute(route, null);
+    public void execRoute(String route, int... flags) {
+        execRoute(route, null, flags);
     }
 
     /**
