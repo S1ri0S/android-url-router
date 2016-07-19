@@ -293,7 +293,7 @@ public class Router {
                 }
 
                 if (activeFlags.contains(FLAG_ADD_TO_BACKSTACK)) {
-                    transaction.addToBackStack(route);
+                    transaction.addToBackStack(route + "_" + String.valueOf(System.currentTimeMillis()));
                 }
 
                 transaction.commit();
