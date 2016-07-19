@@ -34,6 +34,7 @@ public class Router {
     public static final int FLAG_POP_CURRENT_FRAGMENT = 101;
     public static final int FLAG_REPLACE_FRAGMENT = 103;
     public static final int FLAG_START_ACTIVITY_FOR_RESULT = 104;
+    public static final int FLAG_OVERRIDE_SAME_ROUTE = 105;
 
     private static Router router = new Router();
 
@@ -225,6 +226,11 @@ public class Router {
             for (int i : flags) {
                 activeFlags.add(i);
             }
+        }
+
+        /* If it's the same route don't do anything unless FLAG_OVERRIDE_SAME_ROUTE is given */
+        if (currentRoute != null && currentRoute.equals(route) && !activeFlags.contains(FLAG_OVERRIDE_SAME_ROUTE)) {
+            return;
         }
 
         if (resolvedRoute != null) {
