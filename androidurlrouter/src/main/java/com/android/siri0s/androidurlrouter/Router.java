@@ -334,7 +334,7 @@ public class Router {
             regexBuilder
                     .append("^")
                     .append(mappedRoute)
-                    .append("(\\/([a-zA-Z0-9]|\\-)+)?$");
+                    .append("(\\/([a-zA-Z]|\\-)+)?$");
         } else {
             regexBuilder
                     .append("(")
