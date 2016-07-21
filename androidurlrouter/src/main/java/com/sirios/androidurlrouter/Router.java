@@ -6,6 +6,7 @@ import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -411,6 +413,112 @@ public class Router {
         return frag;
     }
 
+    private RouteMatch checkRouteKeys(String givenRoute, Set<String> mappedRoutes) {
+        boolean res;
+        String matchedRoute = null;
+        Uri givenUri = Uri.parse(givenRoute);
+        Map<String, String> args = null;
+
+        for (String mappedRoute : activityRoutes.keySet()) {
+            res = true;
+            args = new HashMap<>();
+            Uri mappedUri = Uri.parse(mappedRoute);
+            List<String> mappedSegments = mappedUri.getPathSegments();
+
+            if (!mappedUri.getScheme().equals(givenUri.getScheme())) {
+                res = false;
+                continue;
+            }
+
+            if (!mappedUri.getHost().equals(givenUri.getHost())) {
+                res = false;
+                continue;
+            }
+
+            if (mappedUri.getPathSegments().size() != givenUri.getPathSegments().size()) {
+                res = false;
+                continue;
+            }
+
+            for (int i = 0; i < mappedUri.getPathSegments().size(); i++) {
+                String regex = null;
+                String mappedSegment = mappedUri.getPathSegments().get(i);
+                String givenSegment = givenUri.getPathSegments().get(i);
+                if (mappedSegment.matches("i:\\{\\w+\\}")) {
+                    regex = "\\d+";
+                    if (!givenSegment.matches(regex)) {
+                        res = false;
+                        break;
+                    } else {
+                        Pattern keyPattern = Pattern.compile("i:\\{(\\w+)\\}");
+                        Pattern valuePattern = Pattern.compile("(\\d+)");
+                        Matcher keyMatcher = keyPattern.matcher(mappedSegment);
+                        Matcher valueMatcher = valuePattern.matcher(givenSegment);
+                        if (keyMatcher.find() && valueMatcher.find()) {
+                            args.put(keyMatcher.group(1), valueMatcher.group(1));
+                        }
+                    }
+                } else if (mappedSegment.matches("s:\\{\\w+\\}")) {
+                    regex = "\\w+";
+                    if (!givenSegment.matches(regex)) {
+                        res = false;
+                        break;
+                    } else {
+                        Pattern keyPattern = Pattern.compile("s:\\{(\\w+)\\}");
+                        Pattern valuePattern = Pattern.compile("(\\w+)");
+                        Matcher keyMatcher = keyPattern.matcher(mappedSegment);
+                        Matcher valueMatcher = valuePattern.matcher(givenSegment);
+                        if (keyMatcher.find() && valueMatcher.find()) {
+                            args.put(keyMatcher.group(1), valueMatcher.group(1));
+                        }
+                    }
+                } else if (!mappedSegment.equals(givenSegment)) {
+                    res = false;
+                    break;
+                }
+            }
+
+            if (res) {
+                matchedRoute = mappedRoute;
+                break;
+            }
+        }
+
+        RouteMatch match = new RouteMatch();
+        match.setMatchedRoute(matchedRoute);
+        match.setArguments(args);
+
+        return match;
+    }
+
+    private Route resolveRoute2(String givenRoute) {
+        //String givenRoute = "app://www.app.com/laws/13582/articles/article/22B?paragraph=4&bn=true";
+        RouteMatch match;
+        Route matchedRoute;
+
+        match = checkRouteKeys(givenRoute, activityRoutes.keySet());
+
+        if (match == null) {
+            match = checkRouteKeys(givenRoute, fragmentRoutes.keySet());
+        } else {
+            matchedRoute = new ActivityRoute();
+            matchedRoute.setMappedRoute(match.getMatchedRoute());
+            matchedRoute.setCleanRoute(givenRoute);
+            matchedRoute.setWildcards(match.getArguments());
+        }
+
+        if (match == null) {
+            match = checkRouteKeys(givenRoute, actionRoutes.keySet());
+        }
+
+        if (match == null) {
+            throw new RouteNotFoundException("The provided route: " + givenRoute + " is not mapped");
+        }
+
+        return null;
+
+    }
+
     /**
      * Create an appropriate Route object for the given route
      *
@@ -567,6 +675,27 @@ public class Router {
 
         public DuplicateRouteException(String message) {
             super(message);
+        }
+    }
+
+    static class RouteMatch {
+        private String matchedRoute;
+        private Map<String, String> arguments;
+
+        public String getMatchedRoute() {
+            return matchedRoute;
+        }
+
+        public void setMatchedRoute(String matchedRoute) {
+            this.matchedRoute = matchedRoute;
+        }
+
+        public Map<String, String> getArguments() {
+            return arguments;
+        }
+
+        public void setArguments(Map<String, String> arguments) {
+            this.arguments = arguments;
         }
     }
 
