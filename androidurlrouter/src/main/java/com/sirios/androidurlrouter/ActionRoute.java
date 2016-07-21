@@ -1,4 +1,4 @@
-package com.android.siri0s.androidurlrouter;
+package com.sirios.androidurlrouter;
 
 /**
  * Specific route class for assigning to generic actions

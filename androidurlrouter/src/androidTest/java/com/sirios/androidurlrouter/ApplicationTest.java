@@ -1,4 +1,4 @@
-package com.android.siri0s.androidurlrouter;
+package com.sirios.androidurlrouter;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;
