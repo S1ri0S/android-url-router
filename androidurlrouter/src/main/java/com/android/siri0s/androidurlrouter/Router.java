@@ -326,7 +326,7 @@ public class Router {
     private String createMappedRouteRegex(String mappedRoute, boolean addLineBounds) {
         String stringWildcardRegex = "s:\\{[^(/|#|!)]+\\}";
         String integerWildcardRegex = "i:\\{[^(/|#|!)]+\\}";
-        String stringFixedRegex = "[^(/|#|!)]";
+        String stringFixedRegex = "[^(/|#|!|?)]+";
         String integerFixedRegex = "(\\\\d+)";
         StringBuilder regexBuilder = new StringBuilder();
         if (addLineBounds) {
