@@ -49,7 +49,7 @@ public class RouterTest {
 
         String regex = null;
         regex = (String) cmrr.invoke(router, "app://www.app.com/articles/i:{articleId}/related/s:{slug}", true);
-        assertEquals(regex, "^app://www\\.app\\.com/articles/(\\d+)/related/[^(/|#|!)](\\/([a-zA-Z]|\\-)+)?$");
+        assertEquals(regex, "^app://www\\.app\\.com/articles/(\\d+)/related/[^(/|#|!|?)]+(\\/([a-zA-Z]|\\-)+)?$");
     }
 
     @Test
