@@ -13,7 +13,7 @@ public class Route<T> {
     private String route;
     private String mappedRoute;
     private String cleanRoute; /* Route without query params */
-    private Map<String, String> wildcards;
+    private Map<String, Comparable> wildcards;
     private Map<String, String> queryParams;
 
     public String getMappedRoute() {
@@ -24,11 +24,11 @@ public class Route<T> {
         this.mappedRoute = mappedRoute;
     }
 
-    public Map<String, String> getWildcards() {
+    public Map<String, Comparable> getWildcards() {
         return wildcards;
     }
 
-    public void setWildcards(Map<String, String> wildcards) {
+    public void setWildcards(Map<String, Comparable> wildcards) {
         this.wildcards = wildcards;
     }
 

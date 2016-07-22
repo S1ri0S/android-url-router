@@ -2,39 +2,34 @@ package com.sirios.androidurlrouter;
 
 import android.app.Activity;
 import android.app.Fragment;
-import android.util.Log;
+import android.content.Context;
 
-import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.lang.reflect.Method;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
  */
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(PowerMockRunner.class)
 public class RouterTest {
 
     private Router router;
 
-    @Mock
-    Log Log;
-
     @Before
     public void initRouter() {
         router = Router.getInstance();
-        router.registerFragmentRoute("app://www.app.com/profile/settings/me/s:{slug}", MockFragment2.class);
+        router.registerActionRoute("app://www.app.com/profile/settings/me/s:{slug}", new MockAction1());
         router.registerFragmentRoute("app://www.app.com/laws/i:{lawId}/articles/i:{articleId}", MockFragment1.class);
         router.registerActivityRoute("app://www.app.com/articles/i:{articleId}/related", MockActivity1.class);
+
     }
 
     @After
@@ -43,51 +38,60 @@ public class RouterTest {
     }
 
     @Test
-    public void createMappedRouteRegex() throws Exception {
-        Method cmrr = Router.class.getDeclaredMethod("createMappedRouteRegex", String.class, boolean.class);
-        cmrr.setAccessible(true);
+    public void testFragmentRoute() throws Exception {
+        Router.RouteMatch routeMatch = router
+                .checkRouteKeys("app://www.app.com/laws/1981/articles/14563/lala-lala-la?order=desc&bn=false",
+                        router.getFragmentRoutes().keySet());
+        Map<String, Comparable> args = routeMatch.getArguments();
+        Route route = router.resolveRoute("app://www.app.com/laws/1981/articles/14563?order=desc&bn=false");
 
-        String regex = null;
-        regex = (String) cmrr.invoke(router, "app://www.app.com/articles/i:{articleId}/related/s:{slug}", true);
-        assertEquals(regex, "^app://www\\.app\\.com/articles/(\\d+)/related/[^(/|#|!|?)]+(\\/([a-zA-Z]|\\-)+)?$");
+        assertEquals(routeMatch.getMatchedRoute(), "app://www.app.com/laws/i:{lawId}/articles/i:{articleId}");
+        assertTrue(args.containsKey("lawId"));
+        assertTrue(args.containsKey("articleId"));
+        assertEquals(args.get("lawId"), 1981);
+        assertEquals(args.get("articleId"), 14563);
+
+        assertEquals(route.getResult(), MockFragment1.class);
+        assertEquals(route.getCleanRoute(), "app://www.app.com/laws/1981/articles/14563?order=desc&bn=false");
+
     }
 
     @Test
-    public void testFragmentRouteArguments() throws Exception {
-        Method rr = Router.class.getDeclaredMethod("resolveRoute", String.class);
-        rr.setAccessible(true);
+    public void testActivityRoute() throws Exception {
+        Route route = router.resolveRoute("app://www.app.com/articles/13746/related?page=1");
 
-        Route route = (Route) rr.invoke(router, "app://www.app.com/laws/1981/articles/14563?order=desc");
-
-        assertThat(route, CoreMatchers.instanceOf(FragmentRoute.class));
-        assertTrue(route.getWildcards().containsKey("lawId"));
+        assertEquals(route.getResult(), MockActivity1.class);
+        assertEquals(route.getCleanRoute(), "app://www.app.com/articles/13746/related?page=1");
         assertTrue(route.getWildcards().containsKey("articleId"));
-        assertEquals(route.getWildcards().get("lawId"), "1981");
-        assertEquals(route.getWildcards().get("articleId"), "14563");
-        assertTrue(route.getQueryParams().containsKey("order"));
-        assertEquals(route.getQueryParams().get("order"), "desc");
-    }
-
-    @Test
-    public void testActivityRouteArguments() throws Exception {
-        Method rr = Router.class.getDeclaredMethod("resolveRoute", String.class);
-        rr.setAccessible(true);
-
-        Route route = (Route) rr.invoke(router, "app://www.app.com/articles/19581/related?page=4&order=desc");
-
-        assertThat(route, CoreMatchers.instanceOf(ActivityRoute.class));
-        assertTrue(route.getWildcards().containsKey("articleId"));
+        assertEquals(route.getWildcards().get("articleId"), 13746);
         assertTrue(route.getQueryParams().containsKey("page"));
-        assertTrue(route.getQueryParams().containsKey("order"));
-
-        assertEquals(route.getWildcards().get("articleId"), "19581");
-        assertEquals(route.getQueryParams().get("page"), "4");
-        assertEquals(route.getQueryParams().get("order"), "desc");
+        assertEquals(route.getQueryParams().get("page"), "1");
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testNoFragmentToolsThrowsException() throws Exception {
-        router.execRoute("app://www.app.com/laws/13751/articles/12842", null, Router.FLAG_ADD_TO_BACKSTACK, Router.FLAG_REPLACE_FRAGMENT);
+    public void testExecRoute() throws Exception {
+        router.execRoute("app://www.app.com/laws/1981/articles/14563/lala-lala-la?order=desc&bn=false");
+    }
+
+    @Test
+    public void checkValidRoute() throws Exception {
+        assertTrue(router.isValidRoute("app://www.app.com/laws/1981/articles/14563/lala-lala-la?order=desc&bn=false"));
+        assertTrue(router.isValidRoute("app://www.app.com/articles/13746/related?page=1"));
+    }
+
+    @Test(expected = Router.DuplicateRouteException.class)
+    public void checkDuplicateRouteException1() throws Exception {
+        router.registerFragmentRoute("app://www.app.com/articles/i:{articleId}/related", MockFragment1.class);
+    }
+
+    @Test(expected = Router.DuplicateRouteException.class)
+    public void checkDuplicateRouteException2() throws Exception {
+        router.registerActivityRoute("app://www.app.com/laws/i:{lawId}/articles/i:{articleId}", MockActivity1.class);
+    }
+
+    @Test(expected = Router.DuplicateRouteException.class)
+    public void checkDuplicateRouteException3() throws Exception {
+        router.registerFragmentRoute("app://www.app.com/profile/settings/me/s:{slug}", MockFragment3.class);
     }
 
     public static class MockActivity1 extends Activity {
@@ -96,7 +100,11 @@ public class RouterTest {
     public static class MockFragment1 extends Fragment {
     }
 
-    public static class MockFragment2 extends Fragment {
+    public static class MockAction1 extends RouterAction {
+        @Override
+        public void doAction(Context context, Route route) {
+            // NOTHING
+        }
     }
 
     public static class MockFragment3 extends Fragment {

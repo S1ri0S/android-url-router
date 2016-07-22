@@ -249,8 +249,12 @@ public class Router {
                     actionRoute.getResult().addRouteArguments(args);
                 }
 
-                for (Map.Entry<String, String> entry : actionRoute.getWildcards().entrySet()) {
-                    actionRoute.getResult().getRouteArguments().putString(entry.getKey(), entry.getValue());
+                for (Map.Entry<String, Comparable> entry : actionRoute.getWildcards().entrySet()) {
+                    if (entry.getValue() instanceof Integer) {
+                        actionRoute.getResult().getRouteArguments().putInt(entry.getKey(), (Integer)entry.getValue());
+                    } else {
+                        actionRoute.getResult().getRouteArguments().putString(entry.getKey(), (String) entry.getValue());
+                    }
                 }
 
                 Bundle queryParams = new Bundle();
@@ -318,42 +322,7 @@ public class Router {
         execRoute(route, null, flags);
     }
 
-    /**
-     * Get the appropriate regexp for the given mapped route.
-     *
-     * @param mappedRoute   The mapped route
-     * @param addLineBounds Include line bounds (^$) in the regex
-     * @return The regex for the mapped route
-     */
-    private String createMappedRouteRegex(String mappedRoute, boolean addLineBounds) {
-        String stringWildcardRegex = "s:\\{[^(/|#|!)]+\\}";
-        String integerWildcardRegex = "i:\\{[^(/|#|!)]+\\}";
-        String stringFixedRegex = "[^(/|#|!|?)]+";
-        String integerFixedRegex = "(\\\\d+)";
-        StringBuilder regexBuilder = new StringBuilder();
-        if (addLineBounds) {
-            //regexBuilder.append("^" + mappedRoute + "(\\/(\\w+|\\-)+)?$");
-            regexBuilder
-                    .append("^")
-                    .append(mappedRoute)
-                    .append("(\\/([a-zA-Z]|\\-)+)?$");
-        } else {
-            regexBuilder
-                    .append("(")
-                    .append(mappedRoute)
-                    .append(")");
-        }
-        String regex = regexBuilder.toString();
-        regex = regex.replaceAll(integerWildcardRegex, integerFixedRegex);
-        regex = regex.replaceAll(stringWildcardRegex, stringFixedRegex);
-        regex = regex.replaceAll("\\.", "\\\\.");
-        regex = regex.replaceAll("\\{", "\\\\{");
-        regex = regex.replaceAll("\\}", "\\\\}");
-
-        return regex;
-    }
-
-    private Intent assembleIntent(Route resolvedRoute, Bundle args) {
+    public Intent assembleIntent(Route resolvedRoute, Bundle args) {
         ActivityRoute route = (ActivityRoute) resolvedRoute;
         Intent intent = new Intent(context, route.getResult());
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -362,9 +331,13 @@ public class Router {
         }
 
         if (route.getWildcards() != null && !route.getWildcards().isEmpty()) {
-            Map<String, String> wc = route.getWildcards();
-            for (Map.Entry<String, String> entry : wc.entrySet()) {
-                intent.putExtra(entry.getKey(), entry.getValue());
+            Map<String, Comparable> wc = route.getWildcards();
+            for (Map.Entry<String, Comparable> entry : wc.entrySet()) {
+                if (entry.getValue() instanceof Integer) {
+                    intent.putExtra(entry.getKey(), (Integer) entry.getValue());
+                } else {
+                    intent.putExtra(entry.getKey(), (String) entry.getValue());
+                }
             }
         }
 
@@ -385,16 +358,20 @@ public class Router {
      *
      * @return The fragment to instantiate
      */
-    private Fragment assembleFragment(Route resolvedRoute) {
+    public Fragment assembleFragment(Route resolvedRoute) {
 
         FragmentRoute fragRoute = ((FragmentRoute) resolvedRoute);
         Fragment frag = Fragment.instantiate(context, fragRoute.getResult().getName());
         Bundle args = new Bundle();
 
         if (fragRoute.getWildcards() != null && !fragRoute.getWildcards().isEmpty()) {
-            Map<String, String> wc = fragRoute.getWildcards();
-            for (Map.Entry<String, String> entry : wc.entrySet()) {
-                args.putString(entry.getKey(), entry.getValue());
+            Map<String, Comparable> wc = fragRoute.getWildcards();
+            for (Map.Entry<String, Comparable> entry : wc.entrySet()) {
+                if (entry.getValue() instanceof Integer) {
+                    args.putInt(entry.getKey(), (Integer) entry.getValue());
+                } else {
+                    args.putString(entry.getKey(), (String) entry.getValue());
+                }
             }
         }
 
@@ -413,13 +390,13 @@ public class Router {
         return frag;
     }
 
-    private RouteMatch checkRouteKeys(String givenRoute, Set<String> mappedRoutes) {
+    public RouteMatch checkRouteKeys(String givenRoute, Set<String> mappedRoutes) {
         boolean res;
         String matchedRoute = null;
         Uri givenUri = Uri.parse(givenRoute);
-        Map<String, String> args = null;
+        Map<String, Comparable> args = null;
 
-        for (String mappedRoute : activityRoutes.keySet()) {
+        for (String mappedRoute : mappedRoutes) {
             res = true;
             args = new HashMap<>();
             Uri mappedUri = Uri.parse(mappedRoute);
@@ -435,12 +412,29 @@ public class Router {
                 continue;
             }
 
-            if (mappedUri.getPathSegments().size() != givenUri.getPathSegments().size()) {
+            int normalSize = mappedUri.getPathSegments().size();
+            int withSlugSize = mappedUri.getPathSegments().size() + 1;
+            if (givenUri.getPathSegments().size() != normalSize && givenUri.getPathSegments().size() != withSlugSize) {
                 res = false;
                 continue;
             }
 
             for (int i = 0; i < mappedUri.getPathSegments().size(); i++) {
+                String lastSegment = givenUri.getPathSegments().get(givenUri.getPathSegments().size() - 1);
+                String slugRegex = "(([a-zA-Z0-9]+\\-)+[a-zA-Z0-9]+)";
+                if (lastSegment.matches(slugRegex)) {
+                    Uri.Builder builder = new Uri.Builder();
+                    builder.scheme(givenUri.getScheme());
+                    builder.authority(givenUri.getAuthority());
+
+                    for (int j = 0; j < givenUri.getPathSegments().size() - 1; j++) {
+                        builder.appendPath(givenUri.getPathSegments().get(j));
+                    }
+                    builder.query(givenUri.getQuery());
+
+                    givenUri = builder.build();
+                }
+
                 String regex = null;
                 String mappedSegment = mappedUri.getPathSegments().get(i);
                 String givenSegment = givenUri.getPathSegments().get(i);
@@ -455,7 +449,7 @@ public class Router {
                         Matcher keyMatcher = keyPattern.matcher(mappedSegment);
                         Matcher valueMatcher = valuePattern.matcher(givenSegment);
                         if (keyMatcher.find() && valueMatcher.find()) {
-                            args.put(keyMatcher.group(1), valueMatcher.group(1));
+                            args.put(keyMatcher.group(1), Integer.parseInt(valueMatcher.group(1)));
                         }
                     }
                 } else if (mappedSegment.matches("s:\\{\\w+\\}")) {
@@ -484,14 +478,36 @@ public class Router {
             }
         }
 
-        RouteMatch match = new RouteMatch();
-        match.setMatchedRoute(matchedRoute);
-        match.setArguments(args);
+        RouteMatch match = null;
+        if (matchedRoute != null) {
+            match = new RouteMatch();
+            match.setMatchedRoute(matchedRoute);
+            if (!args.isEmpty()) {
+                match.setArguments(args);
+            }
+        }
 
         return match;
     }
 
-    private Route resolveRoute2(String givenRoute) {
+    public Map<String, String> extractRouteQueryParams(String givenRoute) {
+        Uri uri = Uri.parse(givenRoute);
+        Map<String, String> qp = new HashMap<>();
+
+        for (String key : uri.getQueryParameterNames()) {
+            String value = uri.getQueryParameter(key);
+            qp.put(key, value);
+        }
+
+        return qp;
+    }
+
+    /**
+     *
+     * @param givenRoute The given route
+     * @return The route object be it Activity, Fragment or generic action
+     */
+    public Route resolveRoute(String givenRoute) {
         //String givenRoute = "app://www.app.com/laws/13582/articles/article/22B?paragraph=4&bn=true";
         RouteMatch match;
         Route matchedRoute;
@@ -505,155 +521,53 @@ public class Router {
             matchedRoute.setMappedRoute(match.getMatchedRoute());
             matchedRoute.setCleanRoute(givenRoute);
             matchedRoute.setWildcards(match.getArguments());
+            matchedRoute.setQueryParams(extractRouteQueryParams(givenRoute));
+            matchedRoute.setResult(activityRoutes.get(match.getMatchedRoute()));
+
+            return matchedRoute;
         }
 
         if (match == null) {
             match = checkRouteKeys(givenRoute, actionRoutes.keySet());
+        } else {
+            matchedRoute = new FragmentRoute();
+            matchedRoute.setMappedRoute(match.getMatchedRoute());
+            matchedRoute.setCleanRoute(givenRoute);
+            matchedRoute.setWildcards(match.getArguments());
+            matchedRoute.setQueryParams(extractRouteQueryParams(givenRoute));
+            matchedRoute.setResult(fragmentRoutes.get(match.getMatchedRoute()));
+
+            return matchedRoute;
         }
 
         if (match == null) {
             throw new RouteNotFoundException("The provided route: " + givenRoute + " is not mapped");
+        } else {
+            matchedRoute = new ActionRoute();
+            matchedRoute.setMappedRoute(match.getMatchedRoute());
+            matchedRoute.setCleanRoute(givenRoute);
+            matchedRoute.setWildcards(match.getArguments());
+            matchedRoute.setQueryParams(extractRouteQueryParams(givenRoute));
+            matchedRoute.setResult(actionRoutes.get(match.getMatchedRoute()));
+
+            return matchedRoute;
         }
-
-        return null;
-
-    }
-
-    /**
-     * Create an appropriate Route object for the given route
-     *
-     * @param route The given route
-     * @return true if Route object valid, false otherwise
-     */
-    private Route resolveRoute(String route) {
-        String queryRegex = "\\?((\\w+=[\\w|,]+)&?)+$";
-        Pattern queryPattern = Pattern.compile(queryRegex);
-        Matcher queryMatcher = queryPattern.matcher(route);
-        Map<String, String> queryParams = new HashMap<>();
-
-        if (queryMatcher.find()) {
-            queryParams = resolveQueryParams(route.substring(queryMatcher.start() + 1, queryMatcher.end()));
-            route = route.replaceAll(queryRegex, "");
-        }
-
-        for (Map.Entry<String, Class<? extends Activity>> entry : activityRoutes.entrySet()) {
-            String regex = createMappedRouteRegex(entry.getKey(), true);
-
-            if (route.matches(regex)) {
-                ActivityRoute resolvedRoute = new ActivityRoute();
-
-                resolvedRoute.setQueryParams(queryParams);
-                resolvedRoute.setMappedRoute(entry.getKey());
-                resolvedRoute.setResult(entry.getValue());
-                resolvedRoute.setWildcards(resolveWildcards(route, entry.getKey()));
-
-                return resolvedRoute;
-            }
-        }
-
-        for (Map.Entry<String, Class<? extends Fragment>> entry : fragmentRoutes.entrySet()) {
-            String regex = createMappedRouteRegex(entry.getKey(), true);
-
-            if (route.matches(regex)) {
-                FragmentRoute resolvedRoute = new FragmentRoute();
-
-                resolvedRoute.setQueryParams(queryParams);
-                resolvedRoute.setMappedRoute(entry.getKey());
-                resolvedRoute.setResult(entry.getValue());
-                resolvedRoute.setWildcards(resolveWildcards(route, entry.getKey()));
-
-                return resolvedRoute;
-            }
-        }
-
-        for (Map.Entry<String, RouterAction> entry : actionRoutes.entrySet()) {
-            String regex = createMappedRouteRegex(entry.getKey(), true);
-
-            if (route.matches(regex)) {
-                ActionRoute resolvedRoute = new ActionRoute();
-
-                resolvedRoute.setQueryParams(queryParams);
-                resolvedRoute.setMappedRoute(entry.getKey());
-                resolvedRoute.setResult(entry.getValue());
-                resolvedRoute.setWildcards(resolveWildcards(route, entry.getKey()));
-
-                return resolvedRoute;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract the query parameters from the provided route if any.
-     *
-     * @param queryString The query string of the url
-     * @return Map containing query parameters in key - value format
-     */
-    private HashMap<String, String> resolveQueryParams(String queryString) {
-        HashMap<String, String> params = new HashMap<>();
-        String[] qparams = queryString.split("&");
-
-        for (String p : qparams) {
-            String key = p.split("=")[0];
-            String val = p.split("=")[1];
-            params.put(key, val);
-        }
-
-        return params;
-    }
-
-    /**
-     * Extract the wildcard names and values and return them as Map of key-value pairs
-     *
-     * @param route       The given route
-     * @param mappedRoute The mapped route
-     * @return Wildcard key - value pairs
-     */
-    private Map<String, String> resolveWildcards(String route, String mappedRoute) {
-        Map<String, String> wc = new HashMap<>();
-
-        if (!routeHasWildCards(mappedRoute)) {
-            return wc;
-        }
-
-        String wildcardRegex = "(\\{\\w+\\})";
-        String fixedRegex = createMappedRouteRegex(mappedRoute, false);
-
-        Pattern wcp = Pattern.compile(wildcardRegex);
-        Pattern fxp = Pattern.compile(fixedRegex);
-
-        Matcher wcm = wcp.matcher(mappedRoute);
-        Matcher fxm = fxp.matcher(route);
-
-        fxm.find();
-        int cnt = 1;
-        while (wcm.find()) {
-            String var = mappedRoute.substring(wcm.start() + 1, wcm.end() - 1);
-            String value = fxm.group(cnt + 1);
-            wc.put(var, value);
-            cnt++;
-        }
-
-        return wc;
-    }
-
-    /**
-     * Check if given route contains wildcards
-     *
-     * @param route The mapped route
-     * @return True if route contains wildcards, false otherwise
-     */
-    private boolean routeHasWildCards(String route) {
-        String wildcardRegex = "\\{\\w+\\}";
-        Pattern wcPat = Pattern.compile(wildcardRegex);
-        Matcher wcMatch = wcPat.matcher(route);
-
-        return wcMatch.find();
     }
 
     public boolean isValidRoute(String route) {
         return resolveRoute(route) != null;
+    }
+
+    public HashMap<String, Class<? extends Activity>> getActivityRoutes() {
+        return activityRoutes;
+    }
+
+    public HashMap<String, Class<? extends Fragment>> getFragmentRoutes() {
+        return fragmentRoutes;
+    }
+
+    public HashMap<String, RouterAction> getActionRoutes() {
+        return actionRoutes;
     }
 
     /**
@@ -678,9 +592,9 @@ public class Router {
         }
     }
 
-    static class RouteMatch {
+    public static class RouteMatch {
         private String matchedRoute;
-        private Map<String, String> arguments;
+        private Map<String, Comparable> arguments;
 
         public String getMatchedRoute() {
             return matchedRoute;
@@ -690,11 +604,11 @@ public class Router {
             this.matchedRoute = matchedRoute;
         }
 
-        public Map<String, String> getArguments() {
+        public Map<String, Comparable> getArguments() {
             return arguments;
         }
 
-        public void setArguments(Map<String, String> arguments) {
+        public void setArguments(Map<String, Comparable> arguments) {
             this.arguments = arguments;
         }
     }
