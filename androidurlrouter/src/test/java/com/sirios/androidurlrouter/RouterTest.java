@@ -28,6 +28,7 @@ public class RouterTest {
         router = Router.getInstance();
         router.registerActionRoute("app://www.app.com/profile/settings/me/s:{slug}", new MockAction1());
         router.registerFragmentRoute("app://www.app.com/laws/i:{lawId}/articles/i:{articleId}", MockFragment1.class);
+        router.registerFragmentRoute("app://www.app.com/pdfViewer/s:{filename}", MockFragment3.class);
         router.registerActivityRoute("app://www.app.com/articles/i:{articleId}/related", MockActivity1.class);
 
     }
@@ -66,6 +67,15 @@ public class RouterTest {
         assertEquals(route.getWildcards().get("articleId"), 13746);
         assertTrue(route.getQueryParams().containsKey("page"));
         assertEquals(route.getQueryParams().get("page"), "1");
+    }
+
+    @Test
+    public void testStringRoute() throws Exception {
+        Route route = router.resolveRoute("app://www.app.com/pdfViewer/lakis-4236-lalakis.pdf");
+
+        assertEquals(route.getResult(), MockFragment3.class);
+        assertTrue(route.getWildcards().containsKey("filename"));
+        assertEquals(route.getWildcards().get("filename"), "lakis-4236-lalakis.pdf");
     }
 
     @Test(expected = IllegalStateException.class)

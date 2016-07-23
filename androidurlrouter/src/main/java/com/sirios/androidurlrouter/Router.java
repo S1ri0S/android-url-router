@@ -453,13 +453,13 @@ public class Router {
                         }
                     }
                 } else if (mappedSegment.matches("s:\\{\\w+\\}")) {
-                    regex = "\\w+";
+                    regex = "[\\w+|\\.|\\-|_]+";
                     if (!givenSegment.matches(regex)) {
                         res = false;
                         break;
                     } else {
                         Pattern keyPattern = Pattern.compile("s:\\{(\\w+)\\}");
-                        Pattern valuePattern = Pattern.compile("(\\w+)");
+                        Pattern valuePattern = Pattern.compile("([\\w+|\\.|\\-|_]+)");
                         Matcher keyMatcher = keyPattern.matcher(mappedSegment);
                         Matcher valueMatcher = valuePattern.matcher(givenSegment);
                         if (keyMatcher.find() && valueMatcher.find()) {
