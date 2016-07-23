@@ -435,7 +435,7 @@ public class Router {
                     givenUri = builder.build();
                 }
 
-                String regex = null;
+                String regex;
                 String mappedSegment = mappedUri.getPathSegments().get(i);
                 String givenSegment = givenUri.getPathSegments().get(i);
                 if (mappedSegment.matches("i:\\{\\w+\\}")) {
