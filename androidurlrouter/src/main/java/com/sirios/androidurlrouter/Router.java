@@ -244,6 +244,8 @@ public class Router {
             if (resolvedRoute instanceof ActionRoute) {
                 ActionRoute actionRoute = ((ActionRoute) resolvedRoute);
                 actionRoute.getResult().setRouteArguments(new Bundle());
+                actionRoute.setWildcards(new HashMap<String, Comparable>());
+                actionRoute.setQueryParams(new HashMap<String, String>());
 
                 if (args != null) {
                     actionRoute.getResult().addRouteArguments(args);
