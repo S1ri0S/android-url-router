@@ -541,7 +541,7 @@ public class Router {
         }
 
         if (match == null) {
-            throw new RouteNotFoundException("The provided route: " + givenRoute + " is not mapped");
+            return null;
         } else {
             matchedRoute = new ActionRoute();
             matchedRoute.setMappedRoute(match.getMatchedRoute());

@@ -30,7 +30,7 @@ public class RouterTest {
         router.registerFragmentRoute("app://www.app.com/laws/i:{lawId}/articles/i:{articleId}", MockFragment1.class);
         router.registerFragmentRoute("app://www.app.com/pdfViewer/s:{filename}", MockFragment3.class);
         router.registerActivityRoute("app://www.app.com/articles/i:{articleId}/related", MockActivity1.class);
-
+        router.registerFragmentRoute("app://www.app.com/webview", MockFragment4.class);
     }
 
     @After
@@ -76,6 +76,15 @@ public class RouterTest {
         assertEquals(route.getResult(), MockFragment3.class);
         assertTrue(route.getWildcards().containsKey("filename"));
         assertEquals(route.getWildcards().get("filename"), "lakis-4236-lalakis.pdf");
+    }
+
+    @Test
+    public void testRouteWithEncodedUrl() throws Exception {
+        Route route = router.resolveRoute("app://www.app.com/webview?url=http%3A%2F%2Fwww.app.com%2Fanalysis");
+
+        assertEquals(route.getResult(), MockFragment4.class);
+        assertTrue(route.getQueryParams().containsKey("url"));
+        assertEquals(route.getQueryParams().get("url"), "http://www.app.com/analysis");
     }
 
     @Test(expected = IllegalStateException.class)
