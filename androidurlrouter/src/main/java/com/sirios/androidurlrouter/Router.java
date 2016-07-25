@@ -12,6 +12,7 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,9 +54,9 @@ public class Router {
     public static Bundle currentArguments;
 
     public Router() {
-        activityRoutes = new HashMap<>();
-        fragmentRoutes = new HashMap<>();
-        actionRoutes = new HashMap<>();
+        activityRoutes = new LinkedHashMap<>();
+        fragmentRoutes = new LinkedHashMap<>();
+        actionRoutes = new LinkedHashMap<>();
 
         fragmentTransactionAnimations = new int[]{0, 0, 0, 0};
     }
@@ -398,6 +399,22 @@ public class Router {
         Uri givenUri = Uri.parse(givenRoute);
         Map<String, Comparable> args = null;
 
+        /* Check for slug at the end of url */
+        String lastSegment = givenUri.getPathSegments().get(givenUri.getPathSegments().size() - 1);
+        String slugRegex = "(([a-zA-Z0-9]+\\-)+[a-zA-Z0-9]+)";
+        if (lastSegment.matches(slugRegex)) {
+            Uri.Builder builder = new Uri.Builder();
+            builder.scheme(givenUri.getScheme());
+            builder.authority(givenUri.getAuthority());
+
+            for (int j = 0; j < givenUri.getPathSegments().size() - 1; j++) {
+                builder.appendPath(givenUri.getPathSegments().get(j));
+            }
+            builder.query(givenUri.getQuery());
+
+            givenUri = builder.build();
+        }
+
         for (String mappedRoute : mappedRoutes) {
             res = true;
             args = new HashMap<>();
@@ -414,29 +431,12 @@ public class Router {
                 continue;
             }
 
-            int normalSize = mappedUri.getPathSegments().size();
-            int withSlugSize = mappedUri.getPathSegments().size() + 1;
-            if (givenUri.getPathSegments().size() != normalSize && givenUri.getPathSegments().size() != withSlugSize) {
+            if (givenUri.getPathSegments().size() != mappedUri.getPathSegments().size()) {
                 res = false;
                 continue;
             }
 
             for (int i = 0; i < mappedUri.getPathSegments().size(); i++) {
-                String lastSegment = givenUri.getPathSegments().get(givenUri.getPathSegments().size() - 1);
-                String slugRegex = "(([a-zA-Z0-9]+\\-)+[a-zA-Z0-9]+)";
-                if (lastSegment.matches(slugRegex)) {
-                    Uri.Builder builder = new Uri.Builder();
-                    builder.scheme(givenUri.getScheme());
-                    builder.authority(givenUri.getAuthority());
-
-                    for (int j = 0; j < givenUri.getPathSegments().size() - 1; j++) {
-                        builder.appendPath(givenUri.getPathSegments().get(j));
-                    }
-                    builder.query(givenUri.getQuery());
-
-                    givenUri = builder.build();
-                }
-
                 String regex;
                 String mappedSegment = mappedUri.getPathSegments().get(i);
                 String givenSegment = givenUri.getPathSegments().get(i);

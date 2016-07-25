@@ -13,6 +13,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -31,6 +32,12 @@ public class RouterTest {
         router.registerFragmentRoute("app://www.app.com/pdfViewer/s:{filename}", MockFragment3.class);
         router.registerActivityRoute("app://www.app.com/articles/i:{articleId}/related", MockActivity1.class);
         router.registerFragmentRoute("app://www.app.com/webview", MockFragment4.class);
+
+        router
+                .registerFragmentRoute("app://www.app.com/laws/notes/article/i:{articleRevisionId}/s:{noteNumber}", MockFragment1.class)
+                .registerFragmentRoute("app://www.app.com/laws/notes/paragraph/i:{paragraphRevisionId}/s:{noteNumber}", MockFragment1.class)
+                .registerFragmentRoute("app://www.app.com/laws/notes/article/i:{articleRevisionId}", MockFragment3.class)
+                .registerFragmentRoute("app://www.app.com/laws/notes/paragraph/i:{paragraphRevisionId}", MockFragment4.class);
     }
 
     @After
@@ -85,6 +92,36 @@ public class RouterTest {
         assertEquals(route.getResult(), MockFragment4.class);
         assertTrue(route.getQueryParams().containsKey("url"));
         assertEquals(route.getQueryParams().get("url"), "http://www.app.com/analysis");
+    }
+
+    @Test
+    public void testRouteEndingWithString() throws Exception {
+        Route route = router.resolveRoute("app://www.app.com/laws/notes/article/19357/1");
+
+        assertEquals(route.getResult(), MockFragment1.class);
+        assertTrue(route.getWildcards().containsKey("articleRevisionId"));
+        assertTrue(route.getWildcards().containsKey("noteNumber"));
+    }
+    
+    @Test
+    public void testNullRoute() throws Exception {
+        Route route = router.resolveRoute("app://www.app.com/articles/article/19541");
+
+        assertNull(route);
+    }
+
+    @Test
+    public void testDifferentScheme() throws Exception {
+        Route route = router.resolveRoute("wrong://www.app.com/webview?url=http%3A%2F%2Fwww.app.com%2Fanalysis");
+
+        assertNull(route);
+    }
+
+    @Test
+    public void testDifferentHost() throws Exception {
+        Route route = router.resolveRoute("app://www.wrong.com/webview?url=http%3A%2F%2Fwww.app.com%2Fanalysis");
+
+        assertNull(route);
     }
 
     @Test(expected = IllegalStateException.class)
