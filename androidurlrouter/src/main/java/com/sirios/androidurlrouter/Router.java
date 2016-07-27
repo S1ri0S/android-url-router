@@ -245,26 +245,28 @@ public class Router {
             if (resolvedRoute instanceof ActionRoute) {
                 ActionRoute actionRoute = ((ActionRoute) resolvedRoute);
                 actionRoute.getResult().setRouteArguments(new Bundle());
-                actionRoute.setWildcards(new HashMap<String, Comparable>());
-                actionRoute.setQueryParams(new HashMap<String, String>());
 
                 if (args != null) {
                     actionRoute.getResult().addRouteArguments(args);
                 }
 
-                for (Map.Entry<String, Comparable> entry : actionRoute.getWildcards().entrySet()) {
-                    if (entry.getValue() instanceof Integer) {
-                        actionRoute.getResult().getRouteArguments().putInt(entry.getKey(), (Integer)entry.getValue());
-                    } else {
-                        actionRoute.getResult().getRouteArguments().putString(entry.getKey(), (String) entry.getValue());
+                if (actionRoute.getWildcards() != null) {
+                    for (Map.Entry<String, Comparable> entry : actionRoute.getWildcards().entrySet()) {
+                        if (entry.getValue() instanceof Integer) {
+                            actionRoute.getResult().getRouteArguments().putInt(entry.getKey(), (Integer) entry.getValue());
+                        } else {
+                            actionRoute.getResult().getRouteArguments().putString(entry.getKey(), (String) entry.getValue());
+                        }
                     }
                 }
 
-                Bundle queryParams = new Bundle();
-                for (Map.Entry<String, String> entry : actionRoute.getQueryParams().entrySet()) {
-                    queryParams.putString(entry.getKey(), entry.getValue());
+                if (actionRoute.getQueryParams() != null) {
+                    Bundle queryParams = new Bundle();
+                    for (Map.Entry<String, String> entry : actionRoute.getQueryParams().entrySet()) {
+                        queryParams.putString(entry.getKey(), entry.getValue());
+                    }
+                    actionRoute.getResult().getRouteArguments().putBundle(ROUTE_QUERY_PARAMS, queryParams);
                 }
-                actionRoute.getResult().getRouteArguments().putBundle(ROUTE_QUERY_PARAMS, queryParams);
 
                 Log.d(LOG_TAG, "Executing router action " + actionRoute.getResult().getClass().getSimpleName());
                 actionRoute.getResult().doAction(context, resolvedRoute);

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,7 @@ public class RouterTest {
     public void initRouter() {
         router = Router.getInstance();
         router.registerActionRoute("app://www.app.com/profile/settings/me/s:{slug}", new MockAction1());
+        router.registerActionRoute("app://www.app.com/files/i:{fileId}", new MockAction1());
         router.registerFragmentRoute("app://www.app.com/laws/i:{lawId}/articles/i:{articleId}", MockFragment1.class);
         router.registerFragmentRoute("app://www.app.com/pdfViewer/s:{filename}", MockFragment3.class);
         router.registerActivityRoute("app://www.app.com/articles/i:{articleId}/related", MockActivity1.class);
@@ -74,6 +76,15 @@ public class RouterTest {
         assertEquals(route.getWildcards().get("articleId"), 13746);
         assertTrue(route.getQueryParams().containsKey("page"));
         assertEquals(route.getQueryParams().get("page"), "1");
+    }
+
+    @Test
+    public void testActionRoute() throws Exception {
+        Route route = router.resolveRoute("app://www.app.com/files/1843?inline=1");
+
+        assertTrue(route.getResult() instanceof MockAction1);
+        assertTrue(route.getWildcards().containsKey("fileId"));
+        assertTrue(route.getQueryParams().containsKey("inline"));
     }
 
     @Test
