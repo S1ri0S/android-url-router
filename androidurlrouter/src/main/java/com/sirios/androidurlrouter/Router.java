@@ -1,6 +1,7 @@
 package com.sirios.androidurlrouter;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
@@ -44,6 +45,7 @@ public class Router {
     private HashMap<String, Class<? extends Activity>> activityRoutes;
     private HashMap<String, Class<? extends Fragment>> fragmentRoutes;
     private HashMap<String, RouterAction> actionRoutes;
+    private List<OnRouteChangeListener> routeChangeListeners;
 
     private Context context;
     private FragmentManager fragmentManager;
@@ -57,6 +59,7 @@ public class Router {
         activityRoutes = new LinkedHashMap<>();
         fragmentRoutes = new LinkedHashMap<>();
         actionRoutes = new LinkedHashMap<>();
+        routeChangeListeners = new ArrayList<>();
 
         fragmentTransactionAnimations = new int[]{0, 0, 0, 0};
     }
@@ -108,6 +111,14 @@ public class Router {
         fragmentTransactionAnimations[3] = popExit;
 
         return this;
+    }
+
+    public void addOnRouteChangeListener(OnRouteChangeListener listener) {
+        routeChangeListeners.add(listener);
+    }
+
+    public void removeOnRouteChangeListener(OnRouteChangeListener listener) {
+        routeChangeListeners.remove(listener);
     }
 
     /**
@@ -236,6 +247,13 @@ public class Router {
             return;
         }
 
+        /* NOTIFY LISTENERS */
+        if (!routeChangeListeners.isEmpty()) {
+            for (OnRouteChangeListener listener : routeChangeListeners) {
+                listener.onBeforeRouteChange(route);
+            }
+        }
+
         if (resolvedRoute != null) {
             resolvedRoute.setRoute(route);
 
@@ -315,6 +333,13 @@ public class Router {
             }
         } else {
             throw new RouteNotFoundException("The provided route: " + route + " is not mapped");
+        }
+
+        /* NOTIFY LISTENERS */
+        if (!routeChangeListeners.isEmpty()) {
+            for (OnRouteChangeListener listener : routeChangeListeners) {
+                listener.onAfterRouteChange(route);
+            }
         }
     }
 
