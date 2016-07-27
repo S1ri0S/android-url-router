@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -310,19 +311,20 @@ public class Router {
                     fragmentManager.popBackStackImmediate();
                 }
 
+                String fragmentTag = route + "_" + String.valueOf(System.currentTimeMillis());
                 FragmentTransaction transaction = fragmentManager.beginTransaction();
                 transaction.setCustomAnimations(fragmentTransactionAnimations[0], fragmentTransactionAnimations[1],
                         fragmentTransactionAnimations[2], fragmentTransactionAnimations[3]);
 
 
                 if (activeFlags.contains(FLAG_REPLACE_FRAGMENT)) {
-                    transaction.replace(fragmentContainerView, fragment);
+                    transaction.replace(fragmentContainerView, fragment, fragmentTag);
                 } else {
-                    transaction.add(fragmentContainerView, fragment);
+                    transaction.add(fragmentContainerView, fragment, fragmentTag);
                 }
 
                 if (activeFlags.contains(FLAG_ADD_TO_BACKSTACK)) {
-                    transaction.addToBackStack(route + "_" + String.valueOf(System.currentTimeMillis()));
+                    transaction.addToBackStack(fragmentTag);
                 }
 
                 transaction.commit();

@@ -8,7 +8,9 @@ import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.JUnitCore;
 import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Map;
@@ -135,6 +137,17 @@ public class RouterTest {
         assertNull(route);
     }
 
+    @Test
+    public void testRouteChangeListener() throws Exception {
+
+        MockListener listener = new MockListener();
+        router.addOnRouteChangeListener(listener);
+        router.execRoute("app://www.app.com/profile/settings/me/foobar");
+
+        assertTrue(listener.isBeforeChange());
+        assertTrue(listener.isAfterChange());
+    }
+
     @Test(expected = IllegalStateException.class)
     public void testExecRoute() throws Exception {
         router.execRoute("app://www.app.com/laws/1981/articles/14563/lala-lala-la?order=desc&bn=false");
@@ -178,5 +191,28 @@ public class RouterTest {
     }
 
     public static class MockFragment4 extends Fragment {
+    }
+
+    class MockListener implements OnRouteChangeListener {
+
+        private boolean beforeChange, afterChange;
+
+        @Override
+        public void onBeforeRouteChange(String route) {
+            beforeChange = true;
+        }
+
+        @Override
+        public void onAfterRouteChange(String route) {
+            afterChange = true;
+        }
+
+        public boolean isBeforeChange() {
+            return beforeChange;
+        }
+
+        public boolean isAfterChange() {
+            return afterChange;
+        }
     }
 }
