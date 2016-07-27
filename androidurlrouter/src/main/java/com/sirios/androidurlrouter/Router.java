@@ -318,9 +318,9 @@ public class Router {
 
 
                 if (activeFlags.contains(FLAG_REPLACE_FRAGMENT)) {
-                    transaction.replace(fragmentContainerView, fragment, fragmentTag);
+                    transaction.replace(fragmentContainerView, fragment, route);
                 } else {
-                    transaction.add(fragmentContainerView, fragment, fragmentTag);
+                    transaction.add(fragmentContainerView, fragment, route);
                 }
 
                 if (activeFlags.contains(FLAG_ADD_TO_BACKSTACK)) {
